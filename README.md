@@ -2,9 +2,8 @@
 
 Enterprise serverless backend foundation for Homes by RCG.
 
-This repository intentionally implements only shared backend infrastructure and a single
-`GET /health` endpoint. Business endpoints, integrations, authentication, persistence, and AI
-features are intentionally out of scope for this foundation.
+This repository contains the shared backend foundation and the first production endpoint for the
+Homes by RCG site.
 
 ## Runtime
 
@@ -23,13 +22,14 @@ npm run sam-build
 npm run sam-local
 ```
 
-## Endpoint
+## Endpoints
 
 ```http
 GET /health
+POST /contact
 ```
 
-The response uses the canonical API envelope:
+All responses use the canonical API envelope:
 
 ```json
 {
@@ -50,7 +50,48 @@ The response uses the canonical API envelope:
 }
 ```
 
+### POST /contact
+
+Accepts contact page submissions and routes them through the `ContactProvider` abstraction. The
+current provider is a mock implementation; Epic 03 will replace it with Amazon SES without changing
+the frontend contract.
+
+Request:
+
+```json
+{
+  "firstName": "Riley",
+  "lastName": "Carter",
+  "email": "riley@example.com",
+  "phone": "+1 555 123 4567",
+  "message": "I would like to schedule a showing.",
+  "journeySource": "contact-page",
+  "currentPage": "/contact",
+  "leadIntent": "schedule-showing",
+  "leadScore": 85,
+  "referral": "google",
+  "campaign": "spring-listings"
+}
+```
+
+Success response:
+
+```json
+{
+  "success": true,
+  "message": "Contact request received.",
+  "data": {
+    "status": "accepted",
+    "provider": "mock"
+  },
+  "errors": [],
+  "requestId": "...",
+  "correlationId": "...",
+  "timestamp": "2026-07-06T00:00:00.000Z"
+}
+```
+
 ## Documentation
 
-See `docs/` for architecture, deployment, configuration, logging, validation, responses, errors,
-and environment guidance.
+See `docs/` for API, architecture, deployment, configuration, logging, validation, responses,
+errors, and environment guidance.

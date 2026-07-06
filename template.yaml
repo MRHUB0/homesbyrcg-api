@@ -51,7 +51,7 @@ Globals:
   Api:
     OpenApiVersion: 3.0.1
     Cors:
-      AllowMethods: "'GET,OPTIONS'"
+      AllowMethods: "'GET,POST,OPTIONS'"
       AllowHeaders: "'Content-Type,Authorization,X-Correlation-Id,X-Request-Id'"
       AllowOrigin: !Sub "'${CorsAllowedOrigins}'"
 
@@ -88,6 +88,23 @@ Resources:
             Path: /health
             Method: GET
 
+  ContactFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${ServiceName}-${AppEnvironment}-contact
+      Description: Contact submission endpoint for Homes by RCG.
+      CodeUri: .
+      Handler: src/handlers/contact/index.handler
+      Policies:
+        - AWSLambdaBasicExecutionRole
+      Events:
+        Contact:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /contact
+            Method: POST
+
 Outputs:
   ApiEndpoint:
     Description: API Gateway endpoint URL.
@@ -95,6 +112,12 @@ Outputs:
   HealthEndpoint:
     Description: Health endpoint URL.
     Value: !Sub https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/${AppEnvironment}/health
+  ContactEndpoint:
+    Description: Contact endpoint URL.
+    Value: !Sub https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/${AppEnvironment}/contact
   HealthFunctionArn:
     Description: Health Lambda function ARN.
     Value: !GetAtt HealthFunction.Arn
+  ContactFunctionArn:
+    Description: Contact Lambda function ARN.
+    Value: !GetAtt ContactFunction.Arn

@@ -15,6 +15,12 @@ export class ValidationError extends AppError {
   }
 }
 
+export class UnprocessableEntityError extends AppError {
+  constructor(message = 'Request could not be processed.', details = []) {
+    super(message, { code: 'UNPROCESSABLE_ENTITY', statusCode: 422, details });
+  }
+}
+
 export class ConfigurationError extends AppError {
   constructor(message = 'Configuration error.', details = []) {
     super(message, { code: 'CONFIGURATION_ERROR', statusCode: 500, details });
