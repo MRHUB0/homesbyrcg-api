@@ -17,17 +17,29 @@ Available validators:
 
 Validation failures throw `ValidationError` and are converted into the canonical response envelope.
 
-`POST /contact` uses these shared validators, then maps field-level contact validation failures to
-`UnprocessableEntityError` (`422`). Required contact fields are:
+Lead endpoints use these shared validators, then map field-level validation failures to
+`UnprocessableEntityError` (`422`).
+
+Canonical lead fields:
 
 - firstName
 - lastName
 - email
 - phone
-- message
 - journeySource
 - currentPage
 - leadIntent
 - leadScore
-- referral
 - campaign
+- referral
+- notes
+
+`POST /contact` accepts `message` and maps it to canonical `notes`.
+
+Endpoint-specific required fields:
+
+- `POST /consultation`: `consultationType`, `preferredContactMethod`, `timeframe`
+- `POST /home-value`: `propertyAddress`, `city`, `state`, `zipCode`, `propertyType`
+
+Enums are defined in the lead validation modules and cover lead intent, consultation options, and
+property type.

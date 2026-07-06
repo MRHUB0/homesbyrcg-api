@@ -1,33 +1,35 @@
-import { ContactService } from '../../contact/contact-service.js';
+import { ConsultationService } from '../../consultation/consultation-service.js';
 import { createApiHandler } from '../../middleware/api-handler.js';
-import { createContactProvider } from '../../providers/provider-factory.js';
+import { createConsultationProvider } from '../../providers/provider-factory.js';
 import { ResponseBuilder } from '../../responses/response-builder.js';
 import { parseJsonBody } from '../../shared/http-body.js';
 
 export const handler = createApiHandler(async (event, { config, context, logger }) => {
-  const contactService = new ContactService({ provider: createContactProvider(config) });
+  const consultationService = new ConsultationService({
+    provider: createConsultationProvider(config),
+  });
   const payload = parseJsonBody(event);
   let lead;
 
   try {
-    lead = contactService.normalize(payload, { context });
+    lead = consultationService.normalize(payload, { context });
   } catch (error) {
-    logger.warn('contact_validation_failed', {
+    logger.warn('consultation_validation_failed', {
       errors: error.details ?? [{ message: error.message }],
     });
     throw error;
   }
 
-  const result = await contactService.submitLead(lead, { context, logger });
+  const result = await consultationService.submitLead(lead, { context, logger });
 
-  logger.info('contact_request_success', {
+  logger.info('consultation_request_success', {
     leadId: lead.leadId,
     provider: result.provider,
     providerStatus: result.status,
   });
 
   return ResponseBuilder.success({
-    message: 'Contact request received.',
+    message: 'Consultation request received.',
     data: {
       status: result.status,
       provider: result.provider,

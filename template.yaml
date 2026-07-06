@@ -28,6 +28,20 @@ Parameters:
   MaxRequestBytes:
     Type: Number
     Default: 1048576
+  LeadProviderMode:
+    Type: String
+    Default: mock
+    AllowedValues:
+      - mock
+      - ses
+  SesSender:
+    Type: String
+    Default: ''
+    NoEcho: true
+  SesRecipient:
+    Type: String
+    Default: ''
+    NoEcho: true
 
 Globals:
   Function:
@@ -44,6 +58,10 @@ Globals:
         LOG_LEVEL: !Ref LogLevel
         CORS_ALLOWED_ORIGINS: !Ref CorsAllowedOrigins
         MAX_REQUEST_BYTES: !Ref MaxRequestBytes
+        LEAD_PROVIDER_MODE: !Ref LeadProviderMode
+        SES_SENDER: !Ref SesSender
+        SES_RECIPIENT: !Ref SesRecipient
+        SES_REGION: !Ref AWS::Region
     LoggingConfig:
       LogFormat: JSON
       ApplicationLogLevel: INFO
@@ -97,12 +115,64 @@ Resources:
       Handler: src/handlers/contact/index.handler
       Policies:
         - AWSLambdaBasicExecutionRole
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ses:SendEmail
+                - ses:SendRawEmail
+              Resource: !Sub arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/${SesSender}
       Events:
         Contact:
           Type: HttpApi
           Properties:
             ApiId: !Ref HttpApi
             Path: /contact
+            Method: POST
+
+  ConsultationFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${ServiceName}-${AppEnvironment}-consultation
+      Description: Consultation lead intake endpoint for Homes by RCG.
+      CodeUri: .
+      Handler: src/handlers/consultation/index.handler
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ses:SendEmail
+                - ses:SendRawEmail
+              Resource: !Sub arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/${SesSender}
+      Events:
+        Consultation:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /consultation
+            Method: POST
+
+  HomeValueFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${ServiceName}-${AppEnvironment}-home-value
+      Description: Home value lead intake endpoint for Homes by RCG.
+      CodeUri: .
+      Handler: src/handlers/home-value/index.handler
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ses:SendEmail
+                - ses:SendRawEmail
+              Resource: !Sub arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/${SesSender}
+      Events:
+        HomeValue:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /home-value
             Method: POST
 
 Outputs:
@@ -115,9 +185,21 @@ Outputs:
   ContactEndpoint:
     Description: Contact endpoint URL.
     Value: !Sub https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/${AppEnvironment}/contact
+  ConsultationEndpoint:
+    Description: Consultation endpoint URL.
+    Value: !Sub https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/${AppEnvironment}/consultation
+  HomeValueEndpoint:
+    Description: Home value endpoint URL.
+    Value: !Sub https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/${AppEnvironment}/home-value
   HealthFunctionArn:
     Description: Health Lambda function ARN.
     Value: !GetAtt HealthFunction.Arn
   ContactFunctionArn:
     Description: Contact Lambda function ARN.
     Value: !GetAtt ContactFunction.Arn
+  ConsultationFunctionArn:
+    Description: Consultation Lambda function ARN.
+    Value: !GetAtt ConsultationFunction.Arn
+  HomeValueFunctionArn:
+    Description: Home value Lambda function ARN.
+    Value: !GetAtt HomeValueFunction.Arn

@@ -13,12 +13,30 @@ The foundation provides:
 - HTTP middleware
 - health endpoint
 - contact endpoint
-- provider abstraction for outbound contact delivery
+- consultation endpoint
+- home value endpoint
+- provider abstraction for lead delivery
 
-`POST /contact` is the first production endpoint. It validates and normalizes the contact request,
-logs the normalized payload, and submits it through `ContactProvider`. The current implementation
-uses `MockContactProvider` and intentionally does not send email. Epic 03 can replace the provider
-with Amazon SES without changing the API contract.
+Lead endpoints follow the same architecture:
 
-Persistence, authentication, AI, email delivery, and CRM integrations are intentionally absent.
-Future endpoints should compose the shared middleware and return the canonical response model.
+```text
+API Gateway
+  -> Lambda Handler
+  -> Business Service
+  -> Provider Interface
+  -> SES Provider or Mock Provider
+  -> Response Builder
+```
+
+Each lead endpoint validates the request, normalizes it into the canonical lead model, logs a
+redacted copy of the normalized object, submits it through a provider abstraction, and returns the
+canonical response envelope.
+
+Production provider mode uses Amazon SES to send professional HTML and plain-text lead emails.
+Local provider mode uses mocks and intentionally does not send email, write to CRM, call AI
+services, or persist data. Future CRM and AI integrations should replace or compose provider
+implementations without changing handlers, services, request models, response models, or frontend
+routes.
+
+Persistence, authentication, AI, and CRM integrations are intentionally absent. Future endpoints
+should compose the shared middleware and return the canonical response model.
