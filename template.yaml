@@ -1,0 +1,100 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Enterprise serverless foundation for Homes by RCG API.
+
+Parameters:
+  AppEnvironment:
+    Type: String
+    Default: development
+    AllowedValues:
+      - local
+      - development
+      - staging
+      - production
+  ServiceName:
+    Type: String
+    Default: homesbyrcg-api
+  LogLevel:
+    Type: String
+    Default: info
+    AllowedValues:
+      - debug
+      - info
+      - warn
+      - error
+  CorsAllowedOrigins:
+    Type: String
+    Default: '*'
+  MaxRequestBytes:
+    Type: Number
+    Default: 1048576
+
+Globals:
+  Function:
+    Runtime: nodejs22.x
+    Architectures:
+      - arm64
+    MemorySize: 256
+    Timeout: 10
+    Tracing: Active
+    Environment:
+      Variables:
+        APP_ENV: !Ref AppEnvironment
+        SERVICE_NAME: !Ref ServiceName
+        LOG_LEVEL: !Ref LogLevel
+        CORS_ALLOWED_ORIGINS: !Ref CorsAllowedOrigins
+        MAX_REQUEST_BYTES: !Ref MaxRequestBytes
+    LoggingConfig:
+      LogFormat: JSON
+      ApplicationLogLevel: INFO
+      SystemLogLevel: WARN
+  Api:
+    OpenApiVersion: 3.0.1
+    Cors:
+      AllowMethods: "'GET,OPTIONS'"
+      AllowHeaders: "'Content-Type,Authorization,X-Correlation-Id,X-Request-Id'"
+      AllowOrigin: !Sub "'${CorsAllowedOrigins}'"
+
+Resources:
+  HttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: !Ref AppEnvironment
+      AccessLogSettings:
+        DestinationArn: !GetAtt ApiAccessLogGroup.Arn
+        Format: >-
+          {"requestId":"$context.requestId","ip":"$context.identity.sourceIp","requestTime":"$context.requestTime","httpMethod":"$context.httpMethod","routeKey":"$context.routeKey","status":"$context.status","protocol":"$context.protocol","responseLength":"$context.responseLength","integrationError":"$context.integrationErrorMessage"}
+
+  ApiAccessLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/apigateway/${ServiceName}-${AppEnvironment}
+      RetentionInDays: 30
+
+  HealthFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${ServiceName}-${AppEnvironment}-health
+      Description: Health endpoint for the Homes by RCG API foundation.
+      CodeUri: .
+      Handler: src/handlers/health/index.handler
+      Policies:
+        - AWSLambdaBasicExecutionRole
+      Events:
+        Health:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /health
+            Method: GET
+
+Outputs:
+  ApiEndpoint:
+    Description: API Gateway endpoint URL.
+    Value: !Sub https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/${AppEnvironment}
+  HealthEndpoint:
+    Description: Health endpoint URL.
+    Value: !Sub https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/${AppEnvironment}/health
+  HealthFunctionArn:
+    Description: Health Lambda function ARN.
+    Value: !GetAtt HealthFunction.Arn

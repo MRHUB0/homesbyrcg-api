@@ -1,0 +1,9 @@
+.aws-sam/
+.env
+.env.*
+!.env.example
+coverage/
+dist/
+node_modules/
+npm-debug.log*
+.DS_Store

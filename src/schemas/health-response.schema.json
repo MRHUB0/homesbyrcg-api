@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://api.homesbyrcg.com/schemas/health-response.schema.json",
+  "type": "object",
+  "required": ["success", "message", "data", "errors", "requestId", "correlationId", "timestamp"],
+  "properties": {
+    "success": { "type": "boolean" },
+    "message": { "type": "string" },
+    "data": {
+      "type": "object",
+      "required": ["status", "service", "version", "environment", "timestamp", "requestId"],
+      "properties": {
+        "status": { "type": "string" },
+        "service": { "type": "string" },
+        "version": { "type": "string" },
+        "environment": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "requestId": { "type": "string" }
+      }
+    },
+    "errors": { "type": "array" },
+    "requestId": { "type": "string" },
+    "correlationId": { "type": "string" },
+    "timestamp": { "type": "string" }
+  }
+}
