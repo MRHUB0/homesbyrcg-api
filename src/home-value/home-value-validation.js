@@ -8,12 +8,18 @@ import { Validators } from '../validation/validators.js';
 
 const homeValueSchema = {
   propertyAddress: [Validators.required(), Validators.length({ min: 1, max: 240 })],
-  city: [Validators.required(), Validators.length({ min: 1, max: 120 })],
-  state: [Validators.required(), Validators.length({ min: 2, max: 2 })],
-  zipCode: [Validators.required(), Validators.length({ min: 5, max: 10 })],
+  city: [Validators.length({ max: 120 })],
+  state: [Validators.length({ min: 2, max: 2 })],
+  zipCode: [Validators.length({ min: 5, max: 10 })],
   propertyType: [
-    Validators.required(),
-    Validators.enum(['single-family', 'condo', 'townhome', 'multi-family', 'land']),
+    Validators.optionalEnum([
+      'single-family',
+      'condo',
+      'townhome',
+      'multi-family',
+      'land',
+      'residential',
+    ]),
   ],
 };
 

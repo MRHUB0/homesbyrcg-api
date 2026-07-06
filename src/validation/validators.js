@@ -34,6 +34,13 @@ export const Validators = {
       value === undefined || value === null || allowed.includes(value) ? null : message;
   },
 
+  optionalEnum(allowed, message = 'Value is not allowed.') {
+    return (value) =>
+      value === undefined || value === null || value === '' || allowed.includes(value)
+        ? null
+        : message;
+  },
+
   boolean(message = 'Value must be a boolean.') {
     return (value) =>
       value === undefined || value === null || typeof value === 'boolean' ? null : message;

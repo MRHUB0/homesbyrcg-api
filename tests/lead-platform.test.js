@@ -58,11 +58,17 @@ test('contact service normalizes into canonical lead model', () => {
     'phone',
     'journeySource',
     'currentPage',
+    'referringPage',
     'leadIntent',
     'leadScore',
     'campaign',
     'referral',
     'notes',
+    'recommendedFollowUp',
+    'conversionType',
+    'conversionEvent',
+    'journeyStage',
+    'decisionType',
     'metadata',
   ]);
 });

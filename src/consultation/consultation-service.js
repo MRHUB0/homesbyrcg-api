@@ -19,6 +19,7 @@ export class ConsultationService extends LeadService {
         consultationType: normalizedRequest.consultationType,
         preferredContactMethod: normalizedRequest.preferredContactMethod,
         timeframe: normalizedRequest.timeframe,
+        intent: normalizedRequest.intent,
       },
     });
   }

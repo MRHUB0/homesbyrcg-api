@@ -6,8 +6,9 @@ export function createCorsHeaders(config, origin) {
 
   return {
     'Access-Control-Allow-Origin': allowedOrigin,
-    'Access-Control-Allow-Headers': 'Content-Type,Authorization,X-Correlation-Id,X-Request-Id',
-    'Access-Control-Allow-Methods': 'GET,OPTIONS',
+    'Access-Control-Allow-Headers':
+      'Content-Type,Authorization,X-Correlation-Id,X-Request-Id,Idempotency-Key',
+    'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
     Vary: 'Origin',
   };
 }

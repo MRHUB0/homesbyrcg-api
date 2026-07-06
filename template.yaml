@@ -70,7 +70,7 @@ Globals:
     OpenApiVersion: 3.0.1
     Cors:
       AllowMethods: "'GET,POST,OPTIONS'"
-      AllowHeaders: "'Content-Type,Authorization,X-Correlation-Id,X-Request-Id'"
+      AllowHeaders: "'Content-Type,Authorization,X-Correlation-Id,X-Request-Id,Idempotency-Key'"
       AllowOrigin: !Sub "'${CorsAllowedOrigins}'"
 
 Resources:
@@ -78,6 +78,18 @@ Resources:
     Type: AWS::Serverless::HttpApi
     Properties:
       StageName: !Ref AppEnvironment
+      CorsConfiguration:
+        AllowOrigins: !Split [',', !Ref CorsAllowedOrigins]
+        AllowMethods:
+          - GET
+          - POST
+          - OPTIONS
+        AllowHeaders:
+          - Content-Type
+          - Authorization
+          - X-Correlation-Id
+          - X-Request-Id
+          - Idempotency-Key
       AccessLogSettings:
         DestinationArn: !GetAtt ApiAccessLogGroup.Arn
         Format: >-
@@ -106,6 +118,23 @@ Resources:
             Path: /health
             Method: GET
 
+  OpenApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${ServiceName}-${AppEnvironment}-openapi
+      Description: OpenAPI contract endpoint for browser clients.
+      CodeUri: .
+      Handler: src/handlers/openapi/index.handler
+      Policies:
+        - AWSLambdaBasicExecutionRole
+      Events:
+        OpenApi:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /openapi.yaml
+            Method: GET
+
   ContactFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -128,6 +157,12 @@ Resources:
             ApiId: !Ref HttpApi
             Path: /contact
             Method: POST
+        ContactOptions:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /contact
+            Method: OPTIONS
 
   ConsultationFunction:
     Type: AWS::Serverless::Function
@@ -151,6 +186,12 @@ Resources:
             ApiId: !Ref HttpApi
             Path: /consultation
             Method: POST
+        ConsultationOptions:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /consultation
+            Method: OPTIONS
 
   HomeValueFunction:
     Type: AWS::Serverless::Function
@@ -174,6 +215,12 @@ Resources:
             ApiId: !Ref HttpApi
             Path: /home-value
             Method: POST
+        HomeValueOptions:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /home-value
+            Method: OPTIONS
 
 Outputs:
   ApiEndpoint:
@@ -191,9 +238,15 @@ Outputs:
   HomeValueEndpoint:
     Description: Home value endpoint URL.
     Value: !Sub https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/${AppEnvironment}/home-value
+  OpenApiEndpoint:
+    Description: OpenAPI contract endpoint URL.
+    Value: !Sub https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/${AppEnvironment}/openapi.yaml
   HealthFunctionArn:
     Description: Health Lambda function ARN.
     Value: !GetAtt HealthFunction.Arn
+  OpenApiFunctionArn:
+    Description: OpenAPI Lambda function ARN.
+    Value: !GetAtt OpenApiFunction.Arn
   ContactFunctionArn:
     Description: Contact Lambda function ARN.
     Value: !GetAtt ContactFunction.Arn

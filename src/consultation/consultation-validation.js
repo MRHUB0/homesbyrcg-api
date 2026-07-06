@@ -8,13 +8,33 @@ import { Validators } from '../validation/validators.js';
 
 const consultationSchema = {
   consultationType: [
-    Validators.required(),
-    Validators.enum(['buying', 'selling', 'investment', 'relocation']),
+    Validators.optionalEnum([
+      'buying',
+      'selling',
+      'investment',
+      'relocation',
+      'housing-guidance',
+      'decision-assessment',
+      'contact-request',
+    ]),
   ],
-  preferredContactMethod: [Validators.required(), Validators.enum(['phone', 'email', 'text'])],
+  preferredContactMethod: [Validators.optionalEnum(['phone', 'email', 'text'])],
   timeframe: [
-    Validators.required(),
-    Validators.enum(['immediate', '30-days', '60-days', '90-days', 'exploring']),
+    Validators.optionalEnum([
+      'immediate',
+      '30-days',
+      '60-days',
+      '90-days',
+      'exploring',
+      'not-specified',
+    ]),
+  ],
+  intent: [
+    Validators.optionalEnum([
+      'schedule-consultation',
+      'contact-request',
+      'decision-assessment-complete',
+    ]),
   ],
 };
 
@@ -27,6 +47,7 @@ export function normalizeConsultationRequest(payload) {
       consultationType: normalizeString(payload?.consultationType),
       preferredContactMethod: normalizeString(payload?.preferredContactMethod),
       timeframe: normalizeString(payload?.timeframe),
+      intent: normalizeString(payload?.intent),
     },
   });
 }
