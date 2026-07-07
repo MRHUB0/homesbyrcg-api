@@ -50,8 +50,10 @@ test('POST /consultation returns accepted response', async () => {
   assert.equal(response.statusCode, 202);
   assert.equal(body.success, true);
   assert.equal(body.message, 'Consultation request received.');
-  assert.equal(body.data.status, 'accepted');
-  assert.equal(body.data.provider, 'mock');
+  assert.ok(body.leadId);
+  assert.equal(body.status, 'RECEIVED');
+  assert.equal(body.provider, undefined);
+  assert.equal(body.data, undefined);
   assert.equal(body.correlationId, 'correlation-123');
 });
 

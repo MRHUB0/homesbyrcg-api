@@ -53,6 +53,10 @@ paths:
       responses:
         "202":
           description: Lead accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LeadAcceptedResponse"
         "400":
           description: Malformed request
         "422":
@@ -76,6 +80,10 @@ paths:
       responses:
         "202":
           description: Lead accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LeadAcceptedResponse"
         "400":
           description: Malformed request
         "422":
@@ -99,6 +107,10 @@ paths:
       responses:
         "202":
           description: Lead accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LeadAcceptedResponse"
         "400":
           description: Malformed request
         "422":
@@ -137,6 +149,27 @@ components:
           type: string
         message:
           type: string
+    LeadAcceptedResponse:
+      type: object
+      required: [success, message, leadId, status, requestId, correlationId, timestamp]
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        message:
+          type: string
+        leadId:
+          type: string
+        status:
+          type: string
+          enum: [RECEIVED, PROCESSING, EMAILED, CRM_SYNCED, FOLLOW_UP, CLOSED]
+        requestId:
+          type: string
+        correlationId:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
     LeadInput:
       type: object
       additionalProperties: true

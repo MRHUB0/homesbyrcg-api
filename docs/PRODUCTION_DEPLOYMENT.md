@@ -18,6 +18,7 @@ Verify:
 - `CorsAllowedOrigins` includes `https://newhomesbyrcg.com`.
 - `LeadProviderMode=ses`.
 - `SesSender` and `SesRecipient` are correct.
+- `LeadTableName` is present in stack outputs.
 - CloudWatch log retention meets operational requirements.
 
 ## Deploy
@@ -47,8 +48,9 @@ Call:
 Confirm:
 
 - Each lead endpoint returns `202`.
-- Response body uses the canonical envelope.
-- `data.provider` is `ses`.
+- Response body includes `success`, `message`, `leadId`, `status`, request IDs, and `timestamp`.
+- Response body does not include PII or provider details.
+- The lead exists in `LeadTable` before provider status is recorded.
 - Email arrives with HTML and plain-text content.
 - CloudWatch logs include request metadata and no raw name, email, phone, or message content.
 

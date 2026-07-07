@@ -141,8 +141,11 @@ for (const scenario of browserRoutes) {
     assert.equal(response.headers['Access-Control-Allow-Origin'], allowedOrigin);
     assert.equal(response.headers['Access-Control-Allow-Methods'], 'GET,POST,OPTIONS');
     assert.equal(body.success, true);
-    assert.equal(body.data.status, 'accepted');
-    assert.deepEqual(body.errors, []);
+    assert.ok(body.leadId);
+    assert.equal(body.status, 'RECEIVED');
+    assert.equal(body.data, undefined);
+    assert.equal(body.errors, undefined);
+    assert.equal(body.provider, undefined);
   });
 }
 

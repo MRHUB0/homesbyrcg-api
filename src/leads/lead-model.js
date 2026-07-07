@@ -10,6 +10,15 @@ export const LeadTypes = Object.freeze({
   HOME_VALUE: 'home-value',
 });
 
+export const LeadStatuses = Object.freeze({
+  RECEIVED: 'RECEIVED',
+  PROCESSING: 'PROCESSING',
+  EMAILED: 'EMAILED',
+  CRM_SYNCED: 'CRM_SYNCED',
+  FOLLOW_UP: 'FOLLOW_UP',
+  CLOSED: 'CLOSED',
+});
+
 export const LeadIntentValues = Object.freeze({
   CONTACT: [
     'general-inquiry',
@@ -210,38 +219,45 @@ export function buildCanonicalLead({
   leadId = randomUUID(),
   timestamp = nowIso(),
 }) {
+  const createdAt = timestamp;
+
   return {
     leadId,
     leadType,
+    timestamp,
     requestId: context.requestId,
     correlationId: context.correlationId,
-    timestamp,
-    firstName: normalizedRequest.firstName,
-    lastName: normalizedRequest.lastName,
-    email: normalizedRequest.email,
-    phone: normalizedRequest.phone,
-    journeySource: normalizedRequest.journeySource,
-    currentPage: normalizedRequest.currentPage,
-    referringPage: normalizedRequest.referringPage,
-    leadIntent: normalizedRequest.leadIntent,
-    leadScore: normalizedRequest.leadScore,
-    campaign: normalizedRequest.campaign,
-    referral: normalizedRequest.referral,
-    notes: normalizedRequest.notes,
-    recommendedFollowUp: normalizedRequest.recommendedFollowUp,
-    conversionType: normalizedRequest.conversionType,
-    conversionEvent: normalizedRequest.conversionEvent,
-    journeyStage: normalizedRequest.journeyStage,
-    decisionType: normalizedRequest.decisionType,
+    status: LeadStatuses.RECEIVED,
+    firstName: valueOrNull(normalizedRequest.firstName),
+    lastName: valueOrNull(normalizedRequest.lastName),
+    email: valueOrNull(normalizedRequest.email),
+    phone: valueOrNull(normalizedRequest.phone),
+    journeySource: valueOrNull(normalizedRequest.journeySource),
+    currentPage: valueOrNull(normalizedRequest.currentPage),
+    referringPage: valueOrNull(normalizedRequest.referringPage),
+    leadIntent: valueOrNull(normalizedRequest.leadIntent),
+    leadScore: valueOrNull(normalizedRequest.leadScore),
+    campaign: valueOrNull(normalizedRequest.campaign),
+    referral: valueOrNull(normalizedRequest.referral),
+    notes: valueOrNull(normalizedRequest.notes),
+    recommendedFollowUp: valueOrNull(normalizedRequest.recommendedFollowUp),
+    conversionType: valueOrNull(normalizedRequest.conversionType),
+    conversionEvent: valueOrNull(normalizedRequest.conversionEvent),
+    journeyStage: valueOrNull(normalizedRequest.journeyStage),
+    decisionType: valueOrNull(normalizedRequest.decisionType),
     metadata: {
       ...metadata,
-      recommendedFollowUp: normalizedRequest.recommendedFollowUp,
-      conversionType: normalizedRequest.conversionType,
-      conversionEvent: normalizedRequest.conversionEvent,
-      journeyStage: normalizedRequest.journeyStage,
-      decisionType: normalizedRequest.decisionType,
-      referringPage: normalizedRequest.referringPage,
+      recommendedFollowUp: valueOrNull(normalizedRequest.recommendedFollowUp),
+      conversionType: valueOrNull(normalizedRequest.conversionType),
+      conversionEvent: valueOrNull(normalizedRequest.conversionEvent),
+      journeyStage: valueOrNull(normalizedRequest.journeyStage),
+      decisionType: valueOrNull(normalizedRequest.decisionType),
+      referringPage: valueOrNull(normalizedRequest.referringPage),
     },
+    provider: null,
+    providerStatus: null,
+    createdAt,
+    updatedAt: createdAt,
   };
 }
 
@@ -322,4 +338,8 @@ function formatLeadType(leadType) {
     .split('-')
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(' ');
+}
+
+function valueOrNull(value) {
+  return value === undefined ? null : value;
 }

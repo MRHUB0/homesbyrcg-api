@@ -28,17 +28,18 @@ POST /consultation
 POST /home-value
 ```
 
-All responses use the canonical API envelope with `success`, `message`, `data`, `errors`,
-`requestId`, `correlationId`, and `timestamp`.
+Lead submission responses return `success`, `message`, `leadId`, `status`, `requestId`,
+`correlationId`, and `timestamp`. PII and provider details are not returned.
 
 Lead endpoints follow one flow:
 
 ```text
-API Gateway -> Lambda Handler -> Business Service -> Provider Interface -> SES or Mock Provider -> Response Builder
+API Gateway -> Lambda Handler -> Business Service -> LeadRepository -> DynamoDB LeadTable -> Provider Interface -> Response Builder
 ```
 
 Lead delivery is configuration-driven. Use `LEAD_PROVIDER_MODE=mock` for local development and
-`LEAD_PROVIDER_MODE=ses` for production email delivery through Amazon SES.
+`LEAD_PROVIDER_MODE=ses` for production email delivery through Amazon SES. Deployed environments
+persist every lead to DynamoDB before any provider executes.
 
 ## Local Curl Examples
 

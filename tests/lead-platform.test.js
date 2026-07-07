@@ -6,6 +6,7 @@ import { ConsultationService } from '../src/consultation/consultation-service.js
 import { UnprocessableEntityError } from '../src/errors/index.js';
 import { HomeValueService } from '../src/home-value/home-value-service.js';
 import { LeadProvider, MockLeadProvider } from '../src/providers/lead-provider.js';
+import { InMemoryLeadRepository } from '../src/repositories/lead-repository.js';
 
 const context = {
   requestId: 'request-123',
@@ -49,9 +50,10 @@ test('contact service normalizes into canonical lead model', () => {
   assert.deepEqual(Object.keys(lead), [
     'leadId',
     'leadType',
+    'timestamp',
     'requestId',
     'correlationId',
-    'timestamp',
+    'status',
     'firstName',
     'lastName',
     'email',
@@ -70,11 +72,24 @@ test('contact service normalizes into canonical lead model', () => {
     'journeyStage',
     'decisionType',
     'metadata',
+    'provider',
+    'providerStatus',
+    'createdAt',
+    'updatedAt',
   ]);
+  assert.equal(lead.status, 'RECEIVED');
+  assert.equal(lead.provider, null);
+  assert.equal(lead.providerStatus, null);
+  assert.equal(lead.createdAt, lead.timestamp);
+  assert.equal(lead.updatedAt, lead.timestamp);
 });
 
 test('consultation service normalizes endpoint metadata', () => {
-  const service = new ConsultationService({ provider: new MockLeadProvider() });
+  const repository = new InMemoryLeadRepository();
+  const service = new ConsultationService({
+    provider: new MockLeadProvider(),
+    repository,
+  });
   const lead = service.normalize(
     {
       ...baseLeadPayload,
@@ -120,7 +135,11 @@ test('lead services submit normalized leads through providers', async () => {
     },
     error() {},
   };
-  const service = new ConsultationService({ provider: new MockLeadProvider() });
+  const repository = new InMemoryLeadRepository();
+  const service = new ConsultationService({
+    provider: new MockLeadProvider(),
+    repository,
+  });
   const lead = service.normalize(
     {
       ...baseLeadPayload,
@@ -137,7 +156,13 @@ test('lead services submit normalized leads through providers', async () => {
   assert.equal(result.provider, 'mock');
   assert.equal(result.status, 'accepted');
   assert.equal(result.requestId, 'request-123');
-  assert.equal(result.lead, lead);
+  assert.equal(result.lead.leadId, lead.leadId);
+  assert.equal(result.lead.provider, 'mock');
+  assert.equal(result.lead.providerStatus, 'accepted');
+
+  const storedLead = await repository.getLead(lead.leadId);
+  assert.equal(storedLead.provider, 'mock');
+  assert.equal(storedLead.providerStatus, 'accepted');
 
   const normalizedLog = logRecords.find((record) => record.message === 'lead_normalized');
   assert.equal(normalizedLog.fields.lead.firstName, '[REDACTED]');
@@ -146,6 +171,12 @@ test('lead services submit normalized leads through providers', async () => {
   assert.equal(normalizedLog.fields.lead.phone, '[REDACTED]');
   assert.equal(normalizedLog.fields.lead.notes, '[REDACTED]');
   assert.equal(normalizedLog.fields.lead.requestId, 'request-123');
+  assert.ok(logRecords.some((record) => record.message === 'lead_created'));
+  assert.ok(logRecords.some((record) => record.message === 'provider_started'));
+  assert.ok(logRecords.some((record) => record.message === 'provider_completed'));
+  assert.ok(logRecords.some((record) => record.message === 'lead_updated'));
+  assert.ok(logRecords.some((record) => record.message === 'repository_latency'));
+  assert.ok(logRecords.some((record) => record.message === 'provider_latency'));
 });
 
 test('lead validation rejects enum failures', () => {

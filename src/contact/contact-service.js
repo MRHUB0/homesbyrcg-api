@@ -3,8 +3,8 @@ import { LeadService } from '../services/lead-service.js';
 import { normalizeContactRequest } from './contact-validation.js';
 
 export class ContactService extends LeadService {
-  constructor({ provider }) {
-    super({ provider, leadType: LeadTypes.CONTACT });
+  constructor({ provider, repository }) {
+    super({ provider, repository, leadType: LeadTypes.CONTACT });
   }
 
   normalize(payload, { context }) {

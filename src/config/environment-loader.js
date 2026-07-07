@@ -14,6 +14,7 @@ export class EnvironmentLoader {
       sesSender: env.SES_SENDER,
       sesRecipient: env.SES_RECIPIENT,
       awsRegion: env.SES_REGION ?? env.AWS_REGION ?? env.AWS_DEFAULT_REGION,
+      leadTableName: env.LEAD_TABLE_NAME,
     };
   }
 }

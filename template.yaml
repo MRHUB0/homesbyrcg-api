@@ -59,6 +59,7 @@ Globals:
         CORS_ALLOWED_ORIGINS: !Ref CorsAllowedOrigins
         MAX_REQUEST_BYTES: !Ref MaxRequestBytes
         LEAD_PROVIDER_MODE: !Ref LeadProviderMode
+        LEAD_TABLE_NAME: !Ref LeadTable
         SES_SENDER: !Ref SesSender
         SES_RECIPIENT: !Ref SesRecipient
         SES_REGION: !Ref AWS::Region
@@ -100,6 +101,31 @@ Resources:
     Properties:
       LogGroupName: !Sub /aws/apigateway/${ServiceName}-${AppEnvironment}
       RetentionInDays: 30
+
+  LeadTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub ${ServiceName}-${AppEnvironment}-leads
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: leadId
+          AttributeType: S
+        - AttributeName: email
+          AttributeType: S
+      KeySchema:
+        - AttributeName: leadId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: LeadEmailIndex
+          KeySchema:
+            - AttributeName: email
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
 
   HealthFunction:
     Type: AWS::Serverless::Function
@@ -147,6 +173,16 @@ Resources:
         - Statement:
             - Effect: Allow
               Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:UpdateItem
+                - dynamodb:Query
+              Resource:
+                - !GetAtt LeadTable.Arn
+                - !Sub ${LeadTable.Arn}/index/LeadEmailIndex
+        - Statement:
+            - Effect: Allow
+              Action:
                 - ses:SendEmail
                 - ses:SendRawEmail
               Resource: !Sub arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/${SesSender}
@@ -173,6 +209,16 @@ Resources:
       Handler: src/handlers/consultation/index.handler
       Policies:
         - AWSLambdaBasicExecutionRole
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:UpdateItem
+                - dynamodb:Query
+              Resource:
+                - !GetAtt LeadTable.Arn
+                - !Sub ${LeadTable.Arn}/index/LeadEmailIndex
         - Statement:
             - Effect: Allow
               Action:
@@ -205,6 +251,16 @@ Resources:
         - Statement:
             - Effect: Allow
               Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:UpdateItem
+                - dynamodb:Query
+              Resource:
+                - !GetAtt LeadTable.Arn
+                - !Sub ${LeadTable.Arn}/index/LeadEmailIndex
+        - Statement:
+            - Effect: Allow
+              Action:
                 - ses:SendEmail
                 - ses:SendRawEmail
               Resource: !Sub arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/${SesSender}
@@ -226,6 +282,9 @@ Outputs:
   ApiEndpoint:
     Description: API Gateway endpoint URL.
     Value: !Sub https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/${AppEnvironment}
+  LeadTableName:
+    Description: DynamoDB table used for durable lead persistence.
+    Value: !Ref LeadTable
   HealthEndpoint:
     Description: Health endpoint URL.
     Value: !Sub https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/${AppEnvironment}/health

@@ -22,6 +22,22 @@ export class ResponseBuilder {
     });
   }
 
+  static leadAccepted({ message, lead, context, headers = {} }) {
+    return ResponseBuilder.build({
+      statusCode: 202,
+      headers,
+      body: {
+        success: true,
+        message,
+        leadId: lead.leadId,
+        status: lead.status,
+        requestId: context.requestId,
+        correlationId: context.correlationId,
+        timestamp: nowIso(),
+      },
+    });
+  }
+
   static error({ error, context, headers = {} }) {
     const appError = ErrorBuilder.from(error);
 

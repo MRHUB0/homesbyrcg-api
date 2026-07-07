@@ -9,7 +9,8 @@ POST /consultation
 POST /home-value
 ```
 
-All endpoint responses use the canonical response envelope.
+Error responses use the canonical error envelope. Successful lead submissions return a non-PII
+acknowledgement.
 
 ## Lead Response
 
@@ -19,11 +20,8 @@ Successful lead submissions return `202`:
 {
   "success": true,
   "message": "Contact request received.",
-  "data": {
-    "status": "accepted",
-    "provider": "ses"
-  },
-  "errors": [],
+  "leadId": "4ad2f3c7-1c8d-45bd-8dc6-5f5fb1f8e04b",
+  "status": "RECEIVED",
   "requestId": "api-request-123",
   "correlationId": "correlation-123",
   "timestamp": "2026-07-06T00:00:00.000Z"
@@ -33,8 +31,8 @@ Successful lead submissions return `202`:
 Malformed JSON returns `400`. Field validation failures return `422`. Unknown exceptions return
 `500`. Provider failures are converted to standardized provider errors.
 
-In local mock mode, `data.provider` is `mock`. In production SES mode, `data.provider` is `ses`.
-The frontend request and response contract does not change.
+Provider details and PII are intentionally omitted from successful responses. The persisted lead is
+created before provider execution, and the provider result is stored on the lead record.
 
 ## POST /contact
 

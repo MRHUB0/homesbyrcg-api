@@ -95,10 +95,12 @@ for (const scenario of cases) {
     assert.equal(response.statusCode, 202);
     assert.equal(body.success, true);
     assert.equal(body.message, scenario.message);
-    assert.equal(body.data.provider, 'mock');
-    assert.equal(body.data.status, 'accepted');
+    assert.ok(body.leadId);
+    assert.equal(body.status, 'RECEIVED');
     assert.equal(body.requestId, 'api-request-123');
     assert.equal(body.correlationId, 'correlation-123');
-    assert.deepEqual(body.errors, []);
+    assert.equal(body.data, undefined);
+    assert.equal(body.errors, undefined);
+    assert.equal(body.provider, undefined);
   });
 }

@@ -42,3 +42,27 @@ test('response builder creates canonical error responses', () => {
   assert.equal(body.errors[0].code, 'UNPROCESSABLE_ENTITY');
   assert.equal(body.errors[0].field, 'email');
 });
+
+test('response builder creates lead accepted responses without PII', () => {
+  const response = ResponseBuilder.leadAccepted({
+    message: 'Contact request received.',
+    lead: {
+      leadId: 'lead-123',
+      status: 'RECEIVED',
+      email: 'riley@example.com',
+      firstName: 'Riley',
+    },
+    context,
+  });
+  const body = JSON.parse(response.body);
+
+  assert.equal(response.statusCode, 202);
+  assert.equal(body.success, true);
+  assert.equal(body.message, 'Contact request received.');
+  assert.equal(body.leadId, 'lead-123');
+  assert.equal(body.status, 'RECEIVED');
+  assert.equal(body.requestId, 'request-123');
+  assert.equal(body.correlationId, 'correlation-123');
+  assert.equal(body.email, undefined);
+  assert.equal(body.firstName, undefined);
+});

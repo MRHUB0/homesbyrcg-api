@@ -1,11 +1,15 @@
 import { HomeValueService } from '../../home-value/home-value-service.js';
 import { createApiHandler } from '../../middleware/api-handler.js';
 import { createHomeValueProvider } from '../../providers/provider-factory.js';
+import { createLeadRepository } from '../../repositories/lead-repository.js';
 import { ResponseBuilder } from '../../responses/response-builder.js';
 import { parseJsonBody } from '../../shared/http-body.js';
 
 export const handler = createApiHandler(async (event, { config, context, logger }) => {
-  const homeValueService = new HomeValueService({ provider: createHomeValueProvider(config) });
+  const homeValueService = new HomeValueService({
+    provider: createHomeValueProvider(config),
+    repository: createLeadRepository(config),
+  });
   const payload = parseJsonBody(event);
   let lead;
 
@@ -21,18 +25,14 @@ export const handler = createApiHandler(async (event, { config, context, logger 
   const result = await homeValueService.submitLead(lead, { context, logger });
 
   logger.info('home_value_request_success', {
-    leadId: lead.leadId,
+    leadId: result.lead.leadId,
     provider: result.provider,
     providerStatus: result.status,
   });
 
-  return ResponseBuilder.success({
+  return ResponseBuilder.leadAccepted({
     message: 'Home value request received.',
-    data: {
-      status: result.status,
-      provider: result.provider,
-    },
-    statusCode: 202,
+    lead: result.lead,
     context,
   });
 });
