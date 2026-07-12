@@ -17,7 +17,8 @@ parameter_overrides = [
   "ServiceName=homesbyrcg-api",
   "LogLevel=info",
   "CorsAllowedOrigins=*",
-  "MaxRequestBytes=1048576"
+  "MaxRequestBytes=1048576",
+  "SesIdentity=homesbyrcg.com"
 ]
 
 [default.local_start_api.parameters]

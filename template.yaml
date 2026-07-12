@@ -42,6 +42,9 @@ Parameters:
     Type: String
     Default: ''
     NoEcho: true
+  SesIdentity:
+    Type: String
+    Default: ''
 
 Globals:
   Function:
@@ -185,7 +188,7 @@ Resources:
               Action:
                 - ses:SendEmail
                 - ses:SendRawEmail
-              Resource: !Sub arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/${SesSender}
+              Resource: !Sub arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/${SesIdentity}
       Events:
         Contact:
           Type: HttpApi
@@ -224,7 +227,7 @@ Resources:
               Action:
                 - ses:SendEmail
                 - ses:SendRawEmail
-              Resource: !Sub arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/${SesSender}
+              Resource: !Sub arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/${SesIdentity}
       Events:
         Consultation:
           Type: HttpApi
@@ -263,7 +266,7 @@ Resources:
               Action:
                 - ses:SendEmail
                 - ses:SendRawEmail
-              Resource: !Sub arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/${SesSender}
+              Resource: !Sub arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/${SesIdentity}
       Events:
         HomeValue:
           Type: HttpApi
