@@ -203,6 +203,45 @@ Resources:
             Path: /contact
             Method: OPTIONS
 
+  LeadsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${ServiceName}-${AppEnvironment}-leads
+      Description: Generic public lead intake for guides, newsletters, and market reports.
+      CodeUri: .
+      Handler: src/handlers/leads/index.handler
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:UpdateItem
+                - dynamodb:Query
+              Resource:
+                - !GetAtt LeadTable.Arn
+                - !Sub ${LeadTable.Arn}/index/LeadEmailIndex
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ses:SendEmail
+                - ses:SendRawEmail
+              Resource: !Sub arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/${SesIdentity}
+      Events:
+        Leads:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /leads
+            Method: POST
+        LeadsOptions:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /leads
+            Method: OPTIONS
+
   ConsultationFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -294,6 +333,9 @@ Outputs:
   ContactEndpoint:
     Description: Contact endpoint URL.
     Value: !Sub https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/${AppEnvironment}/contact
+  LeadsEndpoint:
+    Description: Generic lead endpoint URL.
+    Value: !Sub https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/${AppEnvironment}/leads
   ConsultationEndpoint:
     Description: Consultation endpoint URL.
     Value: !Sub https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/${AppEnvironment}/consultation
@@ -312,6 +354,9 @@ Outputs:
   ContactFunctionArn:
     Description: Contact Lambda function ARN.
     Value: !GetAtt ContactFunction.Arn
+  LeadsFunctionArn:
+    Description: Generic lead Lambda function ARN.
+    Value: !GetAtt LeadsFunction.Arn
   ConsultationFunctionArn:
     Description: Consultation Lambda function ARN.
     Value: !GetAtt ConsultationFunction.Arn

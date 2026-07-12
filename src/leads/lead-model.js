@@ -5,6 +5,7 @@ import { nowIso } from '../shared/time.js';
 import { ValidationFramework, Validators } from '../validation/validators.js';
 
 export const LeadTypes = Object.freeze({
+  GENERIC: 'lead',
   CONTACT: 'contact',
   CONSULTATION: 'consultation',
   HOME_VALUE: 'home-value',
@@ -72,6 +73,9 @@ export const JourneySourceValues = Object.freeze([
   'Contact',
   'Consultation',
   'Home Value',
+  'Newsletter',
+  'Guide',
+  'Market Report',
   'Website',
   'integration-test',
   'contact-page',
