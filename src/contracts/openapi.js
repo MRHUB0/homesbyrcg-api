@@ -5,6 +5,7 @@ import {
   JourneySourceValues,
   JourneyStageValues,
   LeadIntentValues,
+  LeadScoreBandValues,
 } from '../leads/lead-model.js';
 
 const leadIntentValues = [
@@ -215,6 +216,24 @@ components:
           type: number
           minimum: 0
           maximum: 100
+        leadScoreBand:
+          type: string
+          enum: ${yamlInlineArray(LeadScoreBandValues)}
+        leadScoreReasons:
+          type: array
+          maxItems: 20
+          items:
+            type: object
+            additionalProperties: true
+        leadContext:
+          type: object
+          additionalProperties: true
+        journeyTimeline:
+          type: array
+          maxItems: 50
+          items:
+            type: object
+            additionalProperties: true
         recommendedFollowUp:
           type: string
           maxLength: 2000

@@ -14,6 +14,9 @@ export function renderLeadEmail({ lead, title }) {
     ['Current Page', lead.currentPage],
     ['Lead Intent', lead.leadIntent],
     ['Lead Score', lead.leadScore],
+    ['Lead Score Band', lead.leadScoreBand],
+    ['Decision Journey', lead.leadContext?.decisionJourney],
+    ['Primary Goal', lead.leadContext?.primaryGoal],
     ['Campaign', lead.campaign],
     ['Referral', lead.referral],
     ['Message', lead.notes],
@@ -82,7 +85,11 @@ function renderText(rows, title) {
 function metadataRows(metadata = {}) {
   return Object.entries(metadata)
     .filter(([key]) => key !== 'originalEndpoint')
-    .map(([key, value]) => [formatLabel(key), value]);
+    .map(([key, value]) => [formatLabel(key), formatValue(value)]);
+}
+
+function formatValue(value) {
+  return value && typeof value === 'object' ? JSON.stringify(value) : value;
 }
 
 function formatLabel(value) {

@@ -42,12 +42,29 @@ Every lead is normalized into one object:
   "currentPage": "/consultation",
   "leadIntent": "buying-consultation",
   "leadScore": 90,
+  "leadScoreBand": "Very High",
+  "leadScoreReasons": [
+    { "id": "strategy-session", "label": "Requested a Strategy Session", "points": 35 }
+  ],
   "campaign": "spring-listings",
   "referral": "google",
   "conversionType": "consultation",
   "conversionEvent": "consultation_requested",
   "decisionType": "buyer",
   "recommendedFollowUp": "Schedule a consultation.",
+  "leadContext": {
+    "schemaVersion": "1.0",
+    "decisionJourney": "buying-first-home",
+    "primaryGoal": "Build a buying plan",
+    "landingPage": "/life-decisions/buying-first-home/",
+    "pagesViewed": 5,
+    "deviceType": "desktop",
+    "platformVersion": "1.5.0"
+  },
+  "journeyTimeline": [
+    { "event": "landing", "path": "/life-decisions/buying-first-home/" },
+    { "event": "consultation_requested", "path": "/strategy-session/" }
+  ],
   "notes": "I want to buy this year.",
   "metadata": {},
   "provider": null,
@@ -58,14 +75,16 @@ Every lead is normalized into one object:
 ```
 
 Endpoint-specific data is stored in `metadata`. Examples include consultation preferences and home
-valuation property details.
+valuation property details. Lead intelligence is also available at the canonical top level and is
+mirrored into metadata for compatibility with existing consumers.
 
 ## Lead Lifecycle
 
 1. Website submits a JSON payload.
 2. API middleware creates request context, security headers, CORS headers, and logger context.
 3. Handler parses JSON and delegates validation and normalization to the service.
-4. Service builds the canonical lead object with `status=RECEIVED`.
+4. Service builds the canonical lead object with `status=RECEIVED`, validates the optional context,
+   scoring band/reasons, and a maximum 50-event journey timeline.
 5. `LeadRepository.createLead()` persists the record to `LeadTable`.
 6. Provider receives the persisted lead and sends it through SES or accepts it in mock mode.
 7. `LeadRepository.updateLead()` records `provider`, `providerStatus`, and `updatedAt`.
@@ -136,6 +155,11 @@ Provider folders:
 All lead providers submit a persisted canonical lead. SES providers send branded lead emails. Mock
 providers return `accepted` and do not send, enrich, or forward data.
 
+Pure mapping functions in `src/integrations/crm/lead-mapper.js` produce canonical or proposed
+BoldTrail-shaped exports. They never make network calls. Any future CRM delivery must run
+server-side after durable lead persistence, with idempotency, retries, monitoring, and approved
+vendor field identifiers.
+
 ## Observability
 
 Structured logs include:
@@ -153,14 +177,15 @@ Structured logs include:
 - `repository_latency`
 - `provider_latency`
 - provider failures
-- redacted normalized lead object
+- recursively redacted normalized lead object, including context and timeline
 - success responses
 
 ## Future Production Integrations
 
-Production SES delivery is implemented. Remaining production integration work can add:
+Production SES delivery and CRM mapping contracts are implemented. Remaining integration work can
+add:
 
-- CRM lead provider
+- CRM delivery provider using the approved mapping contract
 - AI enrichment provider
 
 Those integrations should not require changes to handlers, request models, response models, or the

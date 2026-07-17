@@ -13,6 +13,10 @@ export function redactLead(lead) {
     phone: redactValue(lead.phone),
     notes: redactValue(lead.notes),
     metadata: redactMetadata(lead.metadata),
+    leadContext: redactMetadata(lead.leadContext),
+    journeyTimeline: Array.isArray(lead.journeyTimeline)
+      ? lead.journeyTimeline.map((event) => redactMetadata(event))
+      : lead.journeyTimeline,
   };
 }
 
@@ -24,6 +28,14 @@ export function redactValidationErrors(errors = []) {
 }
 
 function redactMetadata(metadata = {}) {
+  if (Array.isArray(metadata)) {
+    return metadata.map((value) => redactNestedValue(value));
+  }
+
+  if (!metadata || typeof metadata !== 'object') {
+    return metadata;
+  }
+
   return Object.fromEntries(
     Object.entries(metadata).map(([key, value]) => {
       if (
@@ -34,9 +46,21 @@ function redactMetadata(metadata = {}) {
         return [key, redactValue(value)];
       }
 
-      return [key, value];
+      return [key, redactNestedValue(value)];
     }),
   );
+}
+
+function redactNestedValue(value) {
+  if (Array.isArray(value)) {
+    return value.map((item) => redactNestedValue(item));
+  }
+
+  if (value && typeof value === 'object') {
+    return redactMetadata(value);
+  }
+
+  return value;
 }
 
 function redactEmail(email) {

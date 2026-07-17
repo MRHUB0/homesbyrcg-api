@@ -1,6 +1,6 @@
 # Homes by RCG API
 
-Enterprise serverless backend foundation and lead intake platform for Homes by RCG.
+Enterprise serverless backend foundation and lead-intelligence intake platform for HomesByRCG.
 
 ## Runtime
 
@@ -40,6 +40,11 @@ API Gateway -> Lambda Handler -> Business Service -> LeadRepository -> DynamoDB 
 Lead delivery is configuration-driven. Use `LEAD_PROVIDER_MODE=mock` for local development and
 `LEAD_PROVIDER_MODE=ses` for production email delivery through Amazon SES. Deployed environments
 persist every lead to DynamoDB before any provider executes.
+
+Optional Epic 13 fields (`leadContext`, `journeyTimeline`, `leadScoreBand`, and
+`leadScoreReasons`) preserve decision, attribution, engagement, and scoring context. They are
+validated, persisted, redacted in logs, and available through provider-neutral CRM mappers without
+changing existing endpoint compatibility.
 
 ## Local Curl Examples
 

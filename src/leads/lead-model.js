@@ -141,6 +141,22 @@ export const DecisionTypeValues = Object.freeze([
   'unknown',
 ]);
 
+export const LeadScoreBandValues = Object.freeze(['Low', 'Medium', 'High', 'Very High']);
+
+function isRecord(value) {
+  return (
+    value === undefined || value === null || (typeof value === 'object' && !Array.isArray(value))
+  );
+}
+
+function isTimeline(value) {
+  return value === undefined || value === null || (Array.isArray(value) && value.length <= 50);
+}
+
+function isScoreReasons(value) {
+  return value === undefined || value === null || (Array.isArray(value) && value.length <= 20);
+}
+
 const commonLeadSchema = {
   firstName: [Validators.required(), Validators.length({ min: 1, max: 80 })],
   lastName: [Validators.length({ max: 80 })],
@@ -180,6 +196,14 @@ const commonLeadSchema = {
   decisionType: [
     Validators.length({ max: 120 }),
     Validators.optionalEnum(DecisionTypeValues, 'Decision type is not allowed.'),
+  ],
+  leadScoreBand: [Validators.optionalEnum(LeadScoreBandValues, 'Lead score band is not allowed.')],
+  leadContext: [Validators.custom(isRecord, 'Lead context must be an object.')],
+  journeyTimeline: [
+    Validators.custom(isTimeline, 'Journey timeline must contain no more than 50 events.'),
+  ],
+  leadScoreReasons: [
+    Validators.custom(isScoreReasons, 'Lead score reasons must contain no more than 20 entries.'),
   ],
 };
 
@@ -241,6 +265,8 @@ export function buildCanonicalLead({
     referringPage: valueOrNull(normalizedRequest.referringPage),
     leadIntent: valueOrNull(normalizedRequest.leadIntent),
     leadScore: valueOrNull(normalizedRequest.leadScore),
+    leadScoreBand: valueOrNull(normalizedRequest.leadScoreBand),
+    leadScoreReasons: normalizedRequest.leadScoreReasons || [],
     campaign: valueOrNull(normalizedRequest.campaign),
     referral: valueOrNull(normalizedRequest.referral),
     notes: valueOrNull(normalizedRequest.notes),
@@ -249,6 +275,8 @@ export function buildCanonicalLead({
     conversionEvent: valueOrNull(normalizedRequest.conversionEvent),
     journeyStage: valueOrNull(normalizedRequest.journeyStage),
     decisionType: valueOrNull(normalizedRequest.decisionType),
+    leadContext: normalizedRequest.leadContext || {},
+    journeyTimeline: normalizedRequest.journeyTimeline || [],
     metadata: {
       ...metadata,
       recommendedFollowUp: valueOrNull(normalizedRequest.recommendedFollowUp),
@@ -257,6 +285,10 @@ export function buildCanonicalLead({
       journeyStage: valueOrNull(normalizedRequest.journeyStage),
       decisionType: valueOrNull(normalizedRequest.decisionType),
       referringPage: valueOrNull(normalizedRequest.referringPage),
+      leadContext: normalizedRequest.leadContext || {},
+      journeyTimeline: normalizedRequest.journeyTimeline || [],
+      leadScoreBand: valueOrNull(normalizedRequest.leadScoreBand),
+      leadScoreReasons: normalizedRequest.leadScoreReasons || [],
     },
     provider: null,
     providerStatus: null,
@@ -319,7 +351,22 @@ function normalizeCommonLeadFields(payload) {
     conversionEvent: normalizeString(payload?.conversionEvent ?? embeddedLead.conversionEvent),
     journeyStage: normalizeString(payload?.journeyStage ?? embeddedLead.journeyStage),
     decisionType: normalizeString(payload?.decisionType ?? embeddedLead.decisionType),
+    leadScoreBand: normalizeString(payload?.leadScoreBand ?? embeddedLead.leadScoreBand),
+    leadContext: normalizeStructured(payload?.leadContext ?? embeddedLead.leadContext, {}),
+    journeyTimeline: normalizeStructured(
+      payload?.journeyTimeline ?? embeddedLead.journeyTimeline,
+      [],
+    ),
+    leadScoreReasons: normalizeStructured(
+      payload?.leadScoreReasons ?? embeddedLead.leadScoreReasons,
+      [],
+    ),
   };
+}
+
+function normalizeStructured(value, fallback) {
+  if (value === undefined || value === null) return fallback;
+  return JSON.parse(JSON.stringify(value));
 }
 
 function splitName(value) {
