@@ -41,6 +41,10 @@ Lead delivery is configuration-driven. Use `LEAD_PROVIDER_MODE=mock` for local d
 `LEAD_PROVIDER_MODE=ses` for production email delivery through Amazon SES. Deployed environments
 persist every lead to DynamoDB before any provider executes.
 
+Production is the separate `homesbyrcg-api-production` CloudFormation stack at the API Gateway
+`production` stage. Its CORS allowlist contains only `https://homesbyrcg.com`; localhost origins are
+defaults for local development only. The development stack remains intact.
+
 Optional Epic 13 fields (`leadContext`, `journeyTimeline`, `leadScoreBand`, and
 `leadScoreReasons`) preserve decision, attribution, engagement, and scoring context. They are
 validated, persisted, redacted in logs, and available through provider-neutral CRM mappers without

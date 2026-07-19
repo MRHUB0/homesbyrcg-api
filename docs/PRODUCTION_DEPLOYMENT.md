@@ -15,7 +15,7 @@ Verify:
 
 - SES sender identity is verified.
 - SES account is out of sandbox or recipient is verified.
-- `CorsAllowedOrigins` includes `https://newhomesbyrcg.com`.
+- `CorsAllowedOrigins` is exactly `https://homesbyrcg.com`.
 - `LeadProviderMode=ses`.
 - `SesSender` and `SesRecipient` are correct.
 - `LeadTableName` is present in stack outputs.
@@ -25,11 +25,12 @@ Verify:
 
 ```bash
 sam deploy \
+  --stack-name homesbyrcg-api-production \
   --parameter-overrides \
     AppEnvironment=production \
     ServiceName=homesbyrcg-api \
     LogLevel=info \
-    CorsAllowedOrigins=https://newhomesbyrcg.com,https://homesbyrcg.com \
+    CorsAllowedOrigins=https://homesbyrcg.com \
     MaxRequestBytes=1048576 \
     LeadProviderMode=ses \
     SesSender=leads@homesbyrcg.com \
@@ -56,5 +57,9 @@ Confirm:
 
 ## Frontend Compatibility
 
-The frontend request bodies remain unchanged. To move `newhomesbyrcg` to production, update only the
-API base URL and allowed origin configuration.
+The frontend request bodies remain unchanged. Production base URL:
+`https://wmgq94i246.execute-api.us-east-1.amazonaws.com/production`.
+
+Verify that a preflight from `https://homesbyrcg.com` receives that exact origin and a preflight
+from any other origin does not receive its requested origin. Credentials are not enabled because
+the public lead API does not use cookies or browser authentication.
