@@ -24,7 +24,7 @@ Parameters:
       - error
   CorsAllowedOrigins:
     Type: String
-    Default: '*'
+    Default: 'http://localhost:8080,http://localhost:3000'
   MaxRequestBytes:
     Type: Number
     Default: 1048576
@@ -163,6 +163,249 @@ Resources:
             ApiId: !Ref HttpApi
             Path: /openapi.yaml
             Method: GET
+
+  LambdaErrorsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${ServiceName}-${AppEnvironment}-lambda-errors
+      AlarmDescription: Any Lambda invocation error in the HomesByRCG API environment.
+      Metrics:
+        - Id: total
+          Expression: SUM(METRICS())
+          Label: Total function errors
+          ReturnData: true
+        - Id: health
+          MetricStat:
+            {
+              Metric:
+                {
+                  Namespace: AWS/Lambda,
+                  MetricName: Errors,
+                  Dimensions: [{ Name: FunctionName, Value: !Ref HealthFunction }],
+                },
+              Period: 300,
+              Stat: Sum,
+            }
+          ReturnData: false
+        - Id: openapi
+          MetricStat:
+            {
+              Metric:
+                {
+                  Namespace: AWS/Lambda,
+                  MetricName: Errors,
+                  Dimensions: [{ Name: FunctionName, Value: !Ref OpenApiFunction }],
+                },
+              Period: 300,
+              Stat: Sum,
+            }
+          ReturnData: false
+        - Id: contact
+          MetricStat:
+            {
+              Metric:
+                {
+                  Namespace: AWS/Lambda,
+                  MetricName: Errors,
+                  Dimensions: [{ Name: FunctionName, Value: !Ref ContactFunction }],
+                },
+              Period: 300,
+              Stat: Sum,
+            }
+          ReturnData: false
+        - Id: leads
+          MetricStat:
+            {
+              Metric:
+                {
+                  Namespace: AWS/Lambda,
+                  MetricName: Errors,
+                  Dimensions: [{ Name: FunctionName, Value: !Ref LeadsFunction }],
+                },
+              Period: 300,
+              Stat: Sum,
+            }
+          ReturnData: false
+        - Id: consultation
+          MetricStat:
+            {
+              Metric:
+                {
+                  Namespace: AWS/Lambda,
+                  MetricName: Errors,
+                  Dimensions: [{ Name: FunctionName, Value: !Ref ConsultationFunction }],
+                },
+              Period: 300,
+              Stat: Sum,
+            }
+          ReturnData: false
+        - Id: homevalue
+          MetricStat:
+            {
+              Metric:
+                {
+                  Namespace: AWS/Lambda,
+                  MetricName: Errors,
+                  Dimensions: [{ Name: FunctionName, Value: !Ref HomeValueFunction }],
+                },
+              Period: 300,
+              Stat: Sum,
+            }
+          ReturnData: false
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+
+  LambdaThrottlesAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${ServiceName}-${AppEnvironment}-lambda-throttles
+      AlarmDescription: Any Lambda throttle in the HomesByRCG API environment.
+      Metrics:
+        - Id: total
+          Expression: SUM(METRICS())
+          Label: Total function throttles
+          ReturnData: true
+        - Id: health
+          MetricStat:
+            {
+              Metric:
+                {
+                  Namespace: AWS/Lambda,
+                  MetricName: Throttles,
+                  Dimensions: [{ Name: FunctionName, Value: !Ref HealthFunction }],
+                },
+              Period: 300,
+              Stat: Sum,
+            }
+          ReturnData: false
+        - Id: openapi
+          MetricStat:
+            {
+              Metric:
+                {
+                  Namespace: AWS/Lambda,
+                  MetricName: Throttles,
+                  Dimensions: [{ Name: FunctionName, Value: !Ref OpenApiFunction }],
+                },
+              Period: 300,
+              Stat: Sum,
+            }
+          ReturnData: false
+        - Id: contact
+          MetricStat:
+            {
+              Metric:
+                {
+                  Namespace: AWS/Lambda,
+                  MetricName: Throttles,
+                  Dimensions: [{ Name: FunctionName, Value: !Ref ContactFunction }],
+                },
+              Period: 300,
+              Stat: Sum,
+            }
+          ReturnData: false
+        - Id: leads
+          MetricStat:
+            {
+              Metric:
+                {
+                  Namespace: AWS/Lambda,
+                  MetricName: Throttles,
+                  Dimensions: [{ Name: FunctionName, Value: !Ref LeadsFunction }],
+                },
+              Period: 300,
+              Stat: Sum,
+            }
+          ReturnData: false
+        - Id: consultation
+          MetricStat:
+            {
+              Metric:
+                {
+                  Namespace: AWS/Lambda,
+                  MetricName: Throttles,
+                  Dimensions: [{ Name: FunctionName, Value: !Ref ConsultationFunction }],
+                },
+              Period: 300,
+              Stat: Sum,
+            }
+          ReturnData: false
+        - Id: homevalue
+          MetricStat:
+            {
+              Metric:
+                {
+                  Namespace: AWS/Lambda,
+                  MetricName: Throttles,
+                  Dimensions: [{ Name: FunctionName, Value: !Ref HomeValueFunction }],
+                },
+              Period: 300,
+              Stat: Sum,
+            }
+          ReturnData: false
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+
+  Api5xxAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${ServiceName}-${AppEnvironment}-api-5xx
+      AlarmDescription: API Gateway returned a server error.
+      Namespace: AWS/ApiGateway
+      MetricName: 5xx
+      Dimensions:
+        - Name: ApiId
+          Value: !Ref HttpApi
+        - Name: Stage
+          Value: !Ref AppEnvironment
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+
+  ApiLatencyAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${ServiceName}-${AppEnvironment}-api-latency
+      AlarmDescription: API Gateway average latency exceeded two seconds for two consecutive periods.
+      Namespace: AWS/ApiGateway
+      MetricName: Latency
+      Dimensions:
+        - Name: ApiId
+          Value: !Ref HttpApi
+        - Name: Stage
+          Value: !Ref AppEnvironment
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      DatapointsToAlarm: 2
+      Threshold: 2000
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+
+  SesRejectsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${ServiceName}-${AppEnvironment}-ses-rejects
+      AlarmDescription: Amazon SES rejected one or more send attempts.
+      Namespace: AWS/SES
+      MetricName: Reject
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
 
   ContactFunction:
     Type: AWS::Serverless::Function

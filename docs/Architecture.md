@@ -47,5 +47,10 @@ The lead table uses `leadId` as its partition key, on-demand billing, point-in-t
 server-side encryption. An email GSI supports `LeadRepository.findLeadByEmail()` with `Query`
 instead of `Scan`.
 
+The live production environment is isolated in the `homesbyrcg-api-production` stack and uses the
+`production` API Gateway stage, production Lambda functions, and `homesbyrcg-api-production-leads`
+table. Five CloudWatch alarms cover aggregate Lambda errors, Lambda throttles, API 5XX responses,
+API latency, and SES rejects. API Gateway and Lambda log groups retain logs for 30 days.
+
 Authentication, AI, and CRM integrations are intentionally absent. Future endpoints should compose
 the shared middleware and return the canonical response model.

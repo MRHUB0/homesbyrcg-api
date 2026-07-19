@@ -16,7 +16,7 @@ parameter_overrides = [
   "AppEnvironment=development",
   "ServiceName=homesbyrcg-api",
   "LogLevel=info",
-  "CorsAllowedOrigins=*",
+  "CorsAllowedOrigins=http://localhost:8080,http://localhost:3000",
   "MaxRequestBytes=1048576",
   "SesIdentity=homesbyrcg.com"
 ]
