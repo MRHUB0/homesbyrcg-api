@@ -4,6 +4,7 @@ import test from 'node:test';
 import { ConfigurationError } from '../src/errors/index.js';
 import { renderLeadEmail } from '../src/providers/ses/email-template.js';
 import { SESContactProvider } from '../src/providers/contact/ses-provider.js';
+import { SESGenericLeadProvider } from '../src/providers/generic/ses-provider.js';
 import { ConfigurationLoader } from '../src/config/configuration-loader.js';
 
 const config = {
@@ -88,4 +89,52 @@ test('configuration fails fast for invalid SES production settings', () => {
       error.details.some((detail) => detail.includes('SES_RECIPIENT')) &&
       error.details.some((detail) => detail.includes('SES_REGION')),
   );
+});
+
+test('SES event provider sends operational and attendee email', async () => {
+  const sentCommands = [];
+  const client = {
+    async send(command) {
+      sentCommands.push(command);
+      return { MessageId: `message-${sentCommands.length}` };
+    },
+  };
+  const provider = new SESGenericLeadProvider({ config, client });
+  const result = await provider.submitLead(
+    { ...lead, campaign: 'affordable-real-estate-broker-event' },
+    { logger: { error() {} } },
+  );
+
+  assert.equal(sentCommands.length, 2);
+  assert.deepEqual(sentCommands[0].input.Destination.ToAddresses, ['malik@homesbyrcg.com']);
+  assert.deepEqual(sentCommands[1].input.Destination.ToAddresses, ['riley@example.com']);
+  assert.match(sentCommands[1].input.Message.Body.Text.Data, /Full event details/);
+  assert.equal(result.confirmationEmailSent, true);
+});
+
+test('attendee email failure is non-fatal after operational notification', async () => {
+  let calls = 0;
+  const client = {
+    async send() {
+      calls += 1;
+      if (calls === 2) throw new Error('secondary failed');
+      return { MessageId: 'operational' };
+    },
+  };
+  const errors = [];
+  const provider = new SESGenericLeadProvider({ config, client });
+  const result = await provider.submitLead(
+    { ...lead, campaign: 'affordable-real-estate-broker-event' },
+    {
+      logger: {
+        error(message, fields) {
+          errors.push({ message, fields });
+        },
+      },
+    },
+  );
+
+  assert.equal(result.confirmationEmailSent, false);
+  assert.equal(errors[0].message, 'attendee_confirmation_failed');
+  assert.doesNotMatch(JSON.stringify(errors), /riley@example.com/);
 });

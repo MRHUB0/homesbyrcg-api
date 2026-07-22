@@ -5,6 +5,7 @@ import { ContactService } from '../src/contact/contact-service.js';
 import { ConsultationService } from '../src/consultation/consultation-service.js';
 import { UnprocessableEntityError } from '../src/errors/index.js';
 import { HomeValueService } from '../src/home-value/home-value-service.js';
+import { GenericLeadService } from '../src/leads/generic-lead-service.js';
 import { LeadProvider, MockLeadProvider } from '../src/providers/lead-provider.js';
 import { InMemoryLeadRepository } from '../src/repositories/lead-repository.js';
 
@@ -211,4 +212,35 @@ test('base lead provider requires submitLead implementation', async () => {
   await assert.rejects(() => new LeadProvider().submitLead(), {
     message: 'LeadProvider.submitLead must be implemented.',
   });
+});
+
+test('event campaign persists only allowlisted attribution with a server timestamp', async () => {
+  const service = new GenericLeadService({
+    provider: new MockLeadProvider(),
+    repository: new InMemoryLeadRepository(),
+  });
+  const lead = service.normalize(
+    {
+      firstName: 'Synthetic',
+      lastName: 'Campaign',
+      email: 'event@example.com',
+      notes: 'Event interest',
+      campaign: 'affordable-real-estate-broker-event',
+      journeySource: 'qr-code',
+      conversionType: 'event-registration',
+      conversionEvent: 'event_interest_registered',
+      timestamp: 'client-controlled',
+      metadata: {
+        source: 'qr-code',
+        eventSlug: 'affordable-real-estate-event',
+        ignored: 'drop-me',
+      },
+    },
+    { context },
+  );
+
+  assert.notEqual(lead.timestamp, 'client-controlled');
+  assert.equal(lead.metadata.source, 'qr-code');
+  assert.equal(lead.metadata.eventSlug, 'affordable-real-estate-event');
+  assert.equal(lead.metadata.ignored, undefined);
 });

@@ -33,6 +33,16 @@ export function renderLeadEmail({ lead, title }) {
   };
 }
 
+export function renderEventConfirmationEmail({ lead }) {
+  const title = 'Affordable Real Estate Company Event';
+  const firstName = escapeHtml(lead.firstName || 'there');
+  return {
+    subject: `${title}: we received your interest`,
+    html: `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>${title}</title></head><body style="font-family:Arial,sans-serif;color:#14241f"><div style="max-width:620px;margin:auto;padding:24px"><h1 style="font-size:24px">Thank you, ${firstName}.</h1><p>Thank you for registering your interest in the upcoming Affordable Real Estate Company event.</p><p>We received your information. Full event details, including the confirmed date, time, and location, will be provided when available.</p><p>Affordable Real Estate Company<br><span style="font-size:13px">Powered by HomesByRCG</span></p></div></body></html>`,
+    text: `Thank you, ${lead.firstName || 'there'}.\n\nThank you for registering your interest in the upcoming Affordable Real Estate Company event.\n\nWe received your information. Full event details, including the confirmed date, time, and location, will be provided when available.\n\nAffordable Real Estate Company\nPowered by HomesByRCG`,
+  };
+}
+
 function renderHtml(rows, title) {
   const rowHtml = rows
     .map(

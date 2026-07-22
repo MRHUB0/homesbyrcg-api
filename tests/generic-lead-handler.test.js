@@ -76,3 +76,45 @@ test('POST /leads rejects an invalid email', async () => {
   assert.equal(response.statusCode, 422);
   assert.equal(body.errors[0].field, 'email');
 });
+
+test('POST /leads accepts the QR event campaign and reports mocked confirmation delivery', async () => {
+  configureLocalEnvironment();
+  const response = await submit({
+    firstName: 'Synthetic',
+    lastName: 'Campaign Test',
+    email: 'campaign-test@example.com',
+    journeySource: 'qr-code',
+    currentPage: '/events/affordable-real-estate-event',
+    leadIntent: 'Learning about the event',
+    notes: 'Registered interest in Event Details Coming Soon.',
+    conversionType: 'event-registration',
+    conversionEvent: 'event_interest_registered',
+    campaign: 'affordable-real-estate-broker-event',
+    metadata: {
+      source: 'qr-code',
+      eventSlug: 'affordable-real-estate-event',
+      brokerage: 'Affordable Real Estate Company',
+      landingPage: '/events/affordable-real-estate-event',
+      redirectDestination: 'https://www.afford-realestate.com/',
+      ignoredField: 'must-not-persist',
+    },
+  });
+  const body = JSON.parse(response.body);
+
+  assert.equal(response.statusCode, 202);
+  assert.equal(body.confirmationEmailSent, true);
+});
+
+test('event campaign requires last name without changing newsletter requirements', async () => {
+  configureLocalEnvironment();
+  const response = await submit({
+    firstName: 'Synthetic',
+    email: 'campaign-test@example.com',
+    notes: 'Event interest.',
+    campaign: 'affordable-real-estate-broker-event',
+  });
+  const body = JSON.parse(response.body);
+
+  assert.equal(response.statusCode, 422);
+  assert.ok(body.errors.some((error) => error.field === 'lastName'));
+});
