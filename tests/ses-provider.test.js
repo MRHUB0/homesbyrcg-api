@@ -138,3 +138,23 @@ test('attendee email failure is non-fatal after operational notification', async
   assert.equal(errors[0].message, 'attendee_confirmation_failed');
   assert.doesNotMatch(JSON.stringify(errors), /riley@example.com/);
 });
+
+test('booth connect campaign uses the existing operational SES notification only', async () => {
+  const sentCommands = [];
+  const client = {
+    async send(command) {
+      sentCommands.push(command);
+      return { MessageId: 'booth-operational' };
+    },
+  };
+  const provider = new SESGenericLeadProvider({ config, client });
+  const result = await provider.submitLead(
+    { ...lead, campaign: 'affordable-real-estate-connect' },
+    { logger: { error() {} } },
+  );
+
+  assert.equal(sentCommands.length, 1);
+  assert.deepEqual(sentCommands[0].input.Destination.ToAddresses, ['malik@homesbyrcg.com']);
+  assert.equal(result.messageId, 'booth-operational');
+  assert.equal('confirmationEmailSent' in result, false);
+});

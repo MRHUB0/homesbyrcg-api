@@ -96,6 +96,7 @@ export const ConversionTypeValues = Object.freeze([
   'contact',
   'newsletter',
   'event-registration',
+  'event-lead-capture',
 ]);
 
 export const ConversionEventValues = Object.freeze([
@@ -114,6 +115,7 @@ export const ConversionEventValues = Object.freeze([
   'tool_opened',
   'guide_opened',
   'event_interest_registered',
+  'event_connection_captured',
 ]);
 
 export const JourneyStageValues = Object.freeze([

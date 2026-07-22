@@ -14,6 +14,13 @@ const campaignMetadataFields = Object.freeze([
   'utm',
   'housingInterest',
   'preferredContactMethod',
+  'interest',
+  'timeframe',
+  'helpMessage',
+  'consentFollowUp',
+  'qrVersion',
+  'printBatch',
+  'campaignVersion',
 ]);
 
 function allowedMetadata(metadata = {}) {
