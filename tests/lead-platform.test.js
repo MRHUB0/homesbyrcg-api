@@ -244,3 +244,44 @@ test('event campaign persists only allowlisted attribution with a server timesta
   assert.equal(lead.metadata.eventSlug, 'affordable-real-estate-event');
   assert.equal(lead.metadata.ignored, undefined);
 });
+
+test('booth campaign persists versioned QR attribution and consent through the generic lead service', () => {
+  const service = new GenericLeadService({
+    provider: new MockLeadProvider(),
+    repository: new InMemoryLeadRepository(),
+  });
+  const lead = service.normalize(
+    {
+      firstName: 'Synthetic',
+      lastName: 'Booth Lead',
+      email: 'booth@example.com',
+      phone: '+1 555 555 0199',
+      notes: 'Booth connection.',
+      campaign: 'affordable-real-estate-connect',
+      journeySource: 'qr-code',
+      conversionType: 'event-lead-capture',
+      conversionEvent: 'event_connection_captured',
+      metadata: {
+        source: 'qr-code',
+        eventSlug: 'affordable-real-estate-connect',
+        interest: 'Investing',
+        timeframe: '6-12 Months',
+        consentFollowUp: true,
+        qrVersion: '1',
+        printBatch: 'initial-2026',
+        campaignVersion: '1.0',
+        ignored: 'drop-me',
+      },
+    },
+    { context },
+  );
+
+  assert.equal(lead.metadata.eventSlug, 'affordable-real-estate-connect');
+  assert.equal(lead.metadata.interest, 'Investing');
+  assert.equal(lead.metadata.timeframe, '6-12 Months');
+  assert.equal(lead.metadata.consentFollowUp, true);
+  assert.equal(lead.metadata.qrVersion, '1');
+  assert.equal(lead.metadata.printBatch, 'initial-2026');
+  assert.equal(lead.metadata.campaignVersion, '1.0');
+  assert.equal(lead.metadata.ignored, undefined);
+});

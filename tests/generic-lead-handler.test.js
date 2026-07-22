@@ -118,3 +118,54 @@ test('event campaign requires last name without changing newsletter requirements
   assert.equal(response.statusCode, 422);
   assert.ok(body.errors.some((error) => error.field === 'lastName'));
 });
+
+test('POST /leads accepts the QR booth connect campaign through existing infrastructure', async () => {
+  configureLocalEnvironment();
+  const response = await submit({
+    firstName: 'Production',
+    lastName: 'Booth Test',
+    email: 'booth-test@example.com',
+    phone: '+1 555 555 0199',
+    journeySource: 'qr-code',
+    currentPage: '/events/affordable-real-estate-connect',
+    leadIntent: 'Buying',
+    notes: 'Clearly marked booth campaign test.',
+    conversionType: 'event-lead-capture',
+    conversionEvent: 'event_connection_captured',
+    campaign: 'affordable-real-estate-connect',
+    metadata: {
+      source: 'qr-code',
+      eventSlug: 'affordable-real-estate-connect',
+      brokerage: 'Affordable Real Estate Company',
+      landingPage: '/events/affordable-real-estate-connect',
+      redirectDestination: 'https://www.afford-realestate.com/',
+      interest: 'Buying',
+      timeframe: '3-6 Months',
+      consentFollowUp: true,
+      qrVersion: '1',
+      printBatch: 'initial-2026',
+      campaignVersion: '1.0',
+    },
+  });
+  const body = JSON.parse(response.body);
+
+  assert.equal(response.statusCode, 202);
+  assert.equal(body.success, true);
+  assert.ok(body.leadId);
+  assert.equal('confirmationEmailSent' in body, false);
+});
+
+test('booth connect campaign requires last name and phone', async () => {
+  configureLocalEnvironment();
+  const response = await submit({
+    firstName: 'Synthetic',
+    email: 'booth-test@example.com',
+    notes: 'Booth connection.',
+    campaign: 'affordable-real-estate-connect',
+  });
+  const body = JSON.parse(response.body);
+
+  assert.equal(response.statusCode, 422);
+  assert.ok(body.errors.some((error) => error.field === 'lastName'));
+  assert.ok(body.errors.some((error) => error.field === 'phone'));
+});
