@@ -22,7 +22,7 @@ export class ResponseBuilder {
     });
   }
 
-  static leadAccepted({ message, lead, context, headers = {} }) {
+  static leadAccepted({ message, lead, context, confirmationEmailSent, headers = {} }) {
     return ResponseBuilder.build({
       statusCode: 202,
       headers,
@@ -34,6 +34,7 @@ export class ResponseBuilder {
         requestId: context.requestId,
         correlationId: context.correlationId,
         timestamp: nowIso(),
+        ...(typeof confirmationEmailSent === 'boolean' ? { confirmationEmailSent } : {}),
       },
     });
   }

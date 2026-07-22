@@ -34,5 +34,6 @@ export const handler = createApiHandler(async (event, { config, context, logger 
     message: 'Lead request received.',
     lead: result.lead,
     context,
+    confirmationEmailSent: result.confirmationEmailSent,
   });
 });

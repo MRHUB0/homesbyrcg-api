@@ -252,6 +252,10 @@ components:
         referral:
           type: string
           maxLength: 500
+        metadata:
+          type: object
+          description: Campaign metadata is allowlisted by the receiving lead service.
+          additionalProperties: true
         lead:
           type: object
           additionalProperties: true

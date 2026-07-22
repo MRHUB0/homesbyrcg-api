@@ -78,6 +78,7 @@ export const JourneySourceValues = Object.freeze([
   'Market Report',
   'Website',
   'integration-test',
+  'qr-code',
   'contact-page',
   'consultation-page',
   'home-value-page',
@@ -94,6 +95,7 @@ export const ConversionTypeValues = Object.freeze([
   'search',
   'contact',
   'newsletter',
+  'event-registration',
 ]);
 
 export const ConversionEventValues = Object.freeze([
@@ -111,6 +113,7 @@ export const ConversionEventValues = Object.freeze([
   'market_report_requested',
   'tool_opened',
   'guide_opened',
+  'event_interest_registered',
 ]);
 
 export const JourneyStageValues = Object.freeze([
@@ -205,6 +208,7 @@ const commonLeadSchema = {
   leadScoreReasons: [
     Validators.custom(isScoreReasons, 'Lead score reasons must contain no more than 20 entries.'),
   ],
+  metadata: [Validators.custom(isRecord, 'Metadata must be an object.')],
 };
 
 export function normalizeLeadRequest(
@@ -361,6 +365,7 @@ function normalizeCommonLeadFields(payload) {
       payload?.leadScoreReasons ?? embeddedLead.leadScoreReasons,
       [],
     ),
+    metadata: normalizeStructured(payload?.metadata ?? embeddedLead.metadata, {}),
   };
 }
 
