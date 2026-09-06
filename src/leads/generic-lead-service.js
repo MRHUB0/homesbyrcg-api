@@ -39,6 +39,7 @@ export class GenericLeadService extends LeadService {
     leadIntelligenceService,
     leadIntelligenceRepository,
     leadIntelligenceMetrics,
+    crmSyncService,
   }) {
     super({
       provider,
@@ -48,6 +49,7 @@ export class GenericLeadService extends LeadService {
       leadIntelligenceService,
       leadIntelligenceRepository,
       leadIntelligenceMetrics,
+      crmSyncService,
     });
   }
 

@@ -185,10 +185,10 @@ Provider folders:
 All lead providers submit a persisted canonical lead. SES providers send branded lead emails. Mock
 providers return `accepted` and do not send, enrich, or forward data.
 
-Pure mapping functions in `src/integrations/crm/lead-mapper.js` produce canonical or proposed
-BoldTrail-shaped exports. They never make network calls. Any future CRM delivery must run
-server-side after durable lead persistence, with idempotency, retries, monitoring, and approved
-vendor field identifiers.
+CRM delivery now runs server-side after durable lead persistence through
+`src/integrations/crm/crm-sync-service.js` and provider adapters. The BoldTrail implementation in
+`src/integrations/crm/boldtrail/` uses idempotency, bounded retries, monitoring metrics, and
+vendor-specific mappings without changing canonical lead schema ownership.
 
 ## Observability
 

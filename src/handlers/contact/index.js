@@ -5,6 +5,7 @@ import {
   LeadIntelligenceMetrics,
   LeadIntelligenceService,
 } from '../../lead-intelligence/index.js';
+import { createCrmSyncService } from '../../integrations/crm/crm-factory.js';
 import { createApiHandler } from '../../middleware/api-handler.js';
 import { createContactProvider } from '../../providers/provider-factory.js';
 import { createAnalyticsEventRepository } from '../../repositories/analytics-event-repository.js';
@@ -23,6 +24,12 @@ export const handler = createApiHandler(async (event, { config, context, logger 
     leadIntelligenceService: new LeadIntelligenceService(),
     leadIntelligenceRepository: createLeadIntelligenceRepository(config),
     leadIntelligenceMetrics: new LeadIntelligenceMetrics(),
+    crmSyncService: createCrmSyncService(config),
+    analyticsService,
+    leadIntelligenceService: new LeadIntelligenceService(),
+    leadIntelligenceRepository: createLeadIntelligenceRepository(config),
+    leadIntelligenceMetrics: new LeadIntelligenceMetrics(),
+    crmSyncService: createCrmSyncService(config),
   });
   const payload = parseJsonBody(event);
   let lead;

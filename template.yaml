@@ -34,6 +34,36 @@ Parameters:
     AllowedValues:
       - mock
       - ses
+  CrmProviderMode:
+    Type: String
+    Default: disabled
+    AllowedValues:
+      - disabled
+      - mock
+      - boldtrail
+  CrmSyncTimeoutMs:
+    Type: Number
+    Default: 6000
+  CrmSyncMaxRetries:
+    Type: Number
+    Default: 3
+  CrmSyncBaseDelayMs:
+    Type: Number
+    Default: 150
+  CrmSyncMaxDelayMs:
+    Type: Number
+    Default: 2000
+  BoldTrailApiBaseUrl:
+    Type: String
+    Default: https://api.kvcore.com
+  BoldTrailApiToken:
+    Type: String
+    Default: ''
+    NoEcho: true
+  PropertyRefSigningSecret:
+    Type: String
+    Default: ''
+    NoEcho: true
   SesSender:
     Type: String
     Default: ''
@@ -71,6 +101,16 @@ Globals:
         LEAD_TABLE_NAME: !Ref LeadTable
         ANALYTICS_EVENT_TABLE_NAME: !Ref AnalyticsEventTable
         LEAD_INTELLIGENCE_TABLE_NAME: !Ref LeadIntelligenceTable
+        CRM_PROVIDER_MODE: !Ref CrmProviderMode
+        CRM_SYNC_TIMEOUT_MS: !Ref CrmSyncTimeoutMs
+        CRM_SYNC_MAX_RETRIES: !Ref CrmSyncMaxRetries
+        CRM_SYNC_BASE_DELAY_MS: !Ref CrmSyncBaseDelayMs
+        CRM_SYNC_MAX_DELAY_MS: !Ref CrmSyncMaxDelayMs
+        BOLDTRAIL_API_BASE_URL: !Ref BoldTrailApiBaseUrl
+        BOLDTRAIL_API_TOKEN: !Ref BoldTrailApiToken
+        PROPERTY_REF_SIGNING_SECRET: !Ref PropertyRefSigningSecret
+        EVENT_TABLE_NAME: !Ref AnalyticsEventTable
+        CRM_IDEMPOTENCY_TABLE_NAME: !Ref CrmIdempotencyTable
         SES_SENDER: !Ref SesSender
         SES_RECIPIENT: !Ref SesRecipient
         SES_REGION: !Ref AWS::Region
@@ -257,6 +297,22 @@ Resources:
           AttributeType: S
       KeySchema:
         - AttributeName: leadId
+          KeyType: HASH
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+
+  CrmIdempotencyTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub ${ServiceName}-${AppEnvironment}-crm-idempotency
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: key
+          AttributeType: S
+      KeySchema:
+        - AttributeName: key
           KeyType: HASH
       PointInTimeRecoverySpecification:
         PointInTimeRecoveryEnabled: true
@@ -649,6 +705,14 @@ Resources:
         - Statement:
             - Effect: Allow
               Action:
+                - dynamodb:PutItem
+                - dynamodb:UpdateItem
+                - dynamodb:DeleteItem
+              Resource:
+                - !GetAtt CrmIdempotencyTable.Arn
+        - Statement:
+            - Effect: Allow
+              Action:
                 - ses:SendEmail
               Resource: !Sub arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/${SesIdentity}
       Events:
@@ -713,6 +777,14 @@ Resources:
                 - dynamodb:UpdateItem
               Resource:
                 - !GetAtt LeadIntelligenceTable.Arn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:PutItem
+                - dynamodb:UpdateItem
+                - dynamodb:DeleteItem
+              Resource:
+                - !GetAtt CrmIdempotencyTable.Arn
         - Statement:
             - Effect: Allow
               Action:
@@ -783,6 +855,14 @@ Resources:
         - Statement:
             - Effect: Allow
               Action:
+                - dynamodb:PutItem
+                - dynamodb:UpdateItem
+                - dynamodb:DeleteItem
+              Resource:
+                - !GetAtt CrmIdempotencyTable.Arn
+        - Statement:
+            - Effect: Allow
+              Action:
                 - ses:SendEmail
               Resource: !Sub arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/${SesIdentity}
       Events:
@@ -847,6 +927,14 @@ Resources:
                 - dynamodb:UpdateItem
               Resource:
                 - !GetAtt LeadIntelligenceTable.Arn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:PutItem
+                - dynamodb:UpdateItem
+                - dynamodb:DeleteItem
+              Resource:
+                - !GetAtt CrmIdempotencyTable.Arn
         - Statement:
             - Effect: Allow
               Action:

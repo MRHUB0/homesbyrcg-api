@@ -11,6 +11,7 @@ export class LeadService {
     leadIntelligenceService,
     leadIntelligenceRepository,
     leadIntelligenceMetrics,
+    crmSyncService = null,
   }) {
     this.provider = provider;
     this.repository = repository;
@@ -19,6 +20,7 @@ export class LeadService {
     this.leadIntelligenceService = leadIntelligenceService;
     this.leadIntelligenceRepository = leadIntelligenceRepository;
     this.leadIntelligenceMetrics = leadIntelligenceMetrics;
+    this.crmSyncService = crmSyncService;
   }
 
   async submitLead(lead, { context, logger }) {
@@ -87,6 +89,22 @@ export class LeadService {
         provider: result.provider,
         providerStatus: result.status,
       });
+
+      if (this.crmSyncService) {
+        try {
+          await this.crmSyncService.syncLead(updatedLead, { context, logger });
+        } catch (error) {
+          logger.error('crm_sync_lead_failed', {
+            leadId: updatedLead.leadId,
+            leadType: this.leadType,
+            provider: this.crmSyncService.adapter?.name,
+            error: {
+              name: error.name,
+              message: error.message,
+            },
+          });
+        }
+      }
 
       return {
         ...result,

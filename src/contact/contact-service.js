@@ -10,6 +10,7 @@ export class ContactService extends LeadService {
     leadIntelligenceService,
     leadIntelligenceRepository,
     leadIntelligenceMetrics,
+    crmSyncService,
   }) {
     super({
       provider,
@@ -19,6 +20,7 @@ export class ContactService extends LeadService {
       leadIntelligenceService,
       leadIntelligenceRepository,
       leadIntelligenceMetrics,
+      crmSyncService,
     });
   }
 
