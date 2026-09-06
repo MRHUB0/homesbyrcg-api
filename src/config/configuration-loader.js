@@ -4,6 +4,7 @@ import { EnvironmentLoader } from './environment-loader.js';
 const logLevels = new Set(['debug', 'info', 'warn', 'error']);
 const appEnvironments = new Set(['local', 'development', 'staging', 'production']);
 const leadProviderModes = new Set(['mock', 'ses']);
+const propertyProviderModes = new Set(['mock', 'franklin']);
 
 export class ConfigurationLoader {
   static load(env = process.env) {
@@ -26,12 +27,34 @@ export class ConfigurationLoader {
       errors.push('LEAD_PROVIDER_MODE must be one of mock or ses.');
     }
 
+    if (!propertyProviderModes.has(config.propertyProviderMode)) {
+      errors.push('PROPERTY_PROVIDER_MODE must be one of mock or franklin.');
+    }
+
     if (config.leadProviderMode === 'ses') {
       validateSesConfiguration(config, errors);
     }
 
     if (!Number.isFinite(config.maxRequestBytes) || config.maxRequestBytes <= 0) {
       errors.push('MAX_REQUEST_BYTES must be a positive integer.');
+    }
+
+    if (
+      !Number.isFinite(config.propertyProviderTimeoutMs) ||
+      config.propertyProviderTimeoutMs <= 0
+    ) {
+      errors.push('PROPERTY_PROVIDER_TIMEOUT_MS must be a positive integer.');
+    }
+
+    if (
+      !Number.isFinite(config.propertyProviderMaxAttempts) ||
+      config.propertyProviderMaxAttempts < 1
+    ) {
+      errors.push('PROPERTY_PROVIDER_MAX_ATTEMPTS must be at least 1.');
+    }
+
+    if (!Number.isFinite(config.propertyCacheTtlSeconds) || config.propertyCacheTtlSeconds < 1) {
+      errors.push('PROPERTY_CACHE_TTL_SECONDS must be at least 1.');
     }
 
     if (errors.length > 0) {

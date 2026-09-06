@@ -118,6 +118,114 @@ paths:
           description: Field validation failed
         "500":
           description: Internal server error
+  /property-search:
+    options:
+      summary: CORS preflight
+      responses:
+        "204":
+          description: Preflight accepted
+    post:
+      summary: Search for a property by address input
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PropertyLookupRequest"
+      responses:
+        "200":
+          description: Property lookup result envelope
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "422":
+          description: Invalid property input
+        "500":
+          description: Internal server error
+  /property-record/resolve:
+    options:
+      summary: CORS preflight
+      responses:
+        "204":
+          description: Preflight accepted
+    post:
+      summary: Resolve a canonical property record from address input
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PropertyLookupRequest"
+      responses:
+        "200":
+          description: Property record resolution envelope
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "422":
+          description: Invalid property input
+        "500":
+          description: Internal server error
+  /property-record/value:
+    options:
+      summary: CORS preflight
+      responses:
+        "204":
+          description: Preflight accepted
+    post:
+      summary: Resolve property value record with journey-gated access
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PropertyLookupValueRequest"
+      responses:
+        "200":
+          description: Property value record envelope
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "401":
+          description: Authentication required
+        "403":
+          description: Value access denied
+        "422":
+          description: Invalid request
+        "500":
+          description: Internal server error
+  /property-value:
+    options:
+      summary: CORS preflight
+      responses:
+        "204":
+          description: Preflight accepted
+    post:
+      summary: Resolve property valuation view with journey-gated access
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PropertyLookupValueRequest"
+      responses:
+        "200":
+          description: Property value envelope
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "401":
+          description: Authentication required
+        "403":
+          description: Value access denied
+        "422":
+          description: Invalid request
+        "500":
+          description: Internal server error
 components:
   schemas:
     ApiEnvelope:
@@ -311,6 +419,48 @@ components:
             propertyType:
               type: string
               enum: [single-family, condo, townhome, multi-family, land, residential]
+    PropertyLookupRequest:
+      type: object
+      properties:
+        propertyAddress:
+          type: string
+          maxLength: 240
+        addressLine1:
+          type: string
+          maxLength: 240
+        addressLine2:
+          type: string
+          maxLength: 120
+        city:
+          type: string
+          maxLength: 120
+        state:
+          type: string
+          minLength: 2
+          maxLength: 2
+        postalCode:
+          type: string
+          minLength: 5
+          maxLength: 10
+        zipCode:
+          type: string
+          minLength: 5
+          maxLength: 10
+        county:
+          type: string
+          maxLength: 120
+      anyOf:
+        - required: [propertyAddress]
+        - required: [addressLine1]
+    PropertyLookupValueRequest:
+      allOf:
+        - $ref: "#/components/schemas/PropertyLookupRequest"
+        - type: object
+          required: [leadId]
+          properties:
+            leadId:
+              type: string
+              maxLength: 120
 `;
 }
 
