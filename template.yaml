@@ -287,6 +287,65 @@ Resources:
       SSESpecification:
         SSEEnabled: true
 
+  EventTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      TableName: !Sub ${ServiceName}-${AppEnvironment}-events
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: pk
+          AttributeType: S
+        - AttributeName: sk
+          AttributeType: S
+        - AttributeName: gsiEventPk
+          AttributeType: S
+        - AttributeName: gsiEventSk
+          AttributeType: S
+        - AttributeName: gsiFunnelPk
+          AttributeType: S
+        - AttributeName: gsiFunnelSk
+          AttributeType: S
+        - AttributeName: gsiCampaignPk
+          AttributeType: S
+        - AttributeName: gsiCampaignSk
+          AttributeType: S
+      KeySchema:
+        - AttributeName: pk
+          KeyType: HASH
+        - AttributeName: sk
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: EventNameTimeIndex
+          KeySchema:
+            - AttributeName: gsiEventPk
+              KeyType: HASH
+            - AttributeName: gsiEventSk
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+        - IndexName: FunnelTimeIndex
+          KeySchema:
+            - AttributeName: gsiFunnelPk
+              KeyType: HASH
+            - AttributeName: gsiFunnelSk
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+        - IndexName: CampaignTimeIndex
+          KeySchema:
+            - AttributeName: gsiCampaignPk
+              KeyType: HASH
+            - AttributeName: gsiCampaignSk
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+
   LeadIntelligenceTable:
     Type: AWS::DynamoDB::Table
     Properties:
