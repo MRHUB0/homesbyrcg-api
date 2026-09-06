@@ -1,4 +1,9 @@
 import { ConsultationService } from '../../consultation/consultation-service.js';
+import {
+  createLeadIntelligenceRepository,
+  LeadIntelligenceMetrics,
+  LeadIntelligenceService,
+} from '../../lead-intelligence/index.js';
 import { createApiHandler } from '../../middleware/api-handler.js';
 import { createConsultationProvider } from '../../providers/provider-factory.js';
 import { createLeadRepository } from '../../repositories/lead-repository.js';
@@ -9,6 +14,9 @@ export const handler = createApiHandler(async (event, { config, context, logger 
   const consultationService = new ConsultationService({
     provider: createConsultationProvider(config),
     repository: createLeadRepository(config),
+    leadIntelligenceService: new LeadIntelligenceService(),
+    leadIntelligenceRepository: createLeadIntelligenceRepository(config),
+    leadIntelligenceMetrics: new LeadIntelligenceMetrics(),
   });
   const payload = parseJsonBody(event);
   let lead;

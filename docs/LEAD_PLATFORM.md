@@ -43,6 +43,12 @@ Every lead is normalized into one object:
   "leadIntent": "buying-consultation",
   "leadScore": 90,
   "leadScoreBand": "Very High",
+  "engagementLevel": "HOT",
+  "primaryIntent": "BUYER",
+  "secondaryIntent": "UNKNOWN",
+  "conversionReadiness": "READY",
+  "lastScoredAt": "2026-09-01T12:00:00.000Z",
+  "scoringVersion": "2026-09-05.v1",
   "leadScoreReasons": [
     { "id": "strategy-session", "label": "Requested a Strategy Session", "points": 35 }
   ],
@@ -65,6 +71,14 @@ Every lead is normalized into one object:
     { "event": "landing", "path": "/life-decisions/buying-first-home/" },
     { "event": "consultation_requested", "path": "/strategy-session/" }
   ],
+  "intelligenceSignals": [
+    {
+      "signal": "CONSULTATION_REQUESTED",
+      "contribution": 22.4,
+      "occurrences": 1,
+      "recencyBuckets": ["LAST_7_DAYS"]
+    }
+  ],
   "notes": "I want to buy this year.",
   "metadata": {},
   "provider": null,
@@ -77,6 +91,9 @@ Every lead is normalized into one object:
 Endpoint-specific data is stored in `metadata`. Examples include consultation preferences and home
 valuation property details. Lead intelligence is also available at the canonical top level and is
 mirrored into metadata for compatibility with existing consumers.
+
+Derived explainability snapshots are additionally stored in `LeadIntelligenceTable` by `leadId` so
+raw canonical history and derived intelligence remain separate concerns.
 
 ## Lead Lifecycle
 

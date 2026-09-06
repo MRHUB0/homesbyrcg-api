@@ -63,6 +63,7 @@ Globals:
         MAX_REQUEST_BYTES: !Ref MaxRequestBytes
         LEAD_PROVIDER_MODE: !Ref LeadProviderMode
         LEAD_TABLE_NAME: !Ref LeadTable
+        LEAD_INTELLIGENCE_TABLE_NAME: !Ref LeadIntelligenceTable
         SES_SENDER: !Ref SesSender
         SES_RECIPIENT: !Ref SesRecipient
         SES_REGION: !Ref AWS::Region
@@ -125,6 +126,22 @@ Resources:
               KeyType: HASH
           Projection:
             ProjectionType: ALL
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+
+  LeadIntelligenceTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub ${ServiceName}-${AppEnvironment}-lead-intelligence
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: leadId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: leadId
+          KeyType: HASH
       PointInTimeRecoverySpecification:
         PointInTimeRecoveryEnabled: true
       SSESpecification:
@@ -426,6 +443,7 @@ Resources:
               Resource:
                 - !GetAtt LeadTable.Arn
                 - !Sub ${LeadTable.Arn}/index/LeadEmailIndex
+                - !GetAtt LeadIntelligenceTable.Arn
         - Statement:
             - Effect: Allow
               Action:
@@ -465,6 +483,7 @@ Resources:
               Resource:
                 - !GetAtt LeadTable.Arn
                 - !Sub ${LeadTable.Arn}/index/LeadEmailIndex
+                - !GetAtt LeadIntelligenceTable.Arn
         - Statement:
             - Effect: Allow
               Action:
@@ -504,6 +523,7 @@ Resources:
               Resource:
                 - !GetAtt LeadTable.Arn
                 - !Sub ${LeadTable.Arn}/index/LeadEmailIndex
+                - !GetAtt LeadIntelligenceTable.Arn
         - Statement:
             - Effect: Allow
               Action:
@@ -543,6 +563,7 @@ Resources:
               Resource:
                 - !GetAtt LeadTable.Arn
                 - !Sub ${LeadTable.Arn}/index/LeadEmailIndex
+                - !GetAtt LeadIntelligenceTable.Arn
         - Statement:
             - Effect: Allow
               Action:
@@ -570,6 +591,9 @@ Outputs:
   LeadTableName:
     Description: DynamoDB table used for durable lead persistence.
     Value: !Ref LeadTable
+  LeadIntelligenceTableName:
+    Description: DynamoDB table used for derived lead intelligence snapshots.
+    Value: !Ref LeadIntelligenceTable
   HealthEndpoint:
     Description: Health endpoint URL.
     Value: !Sub https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/${AppEnvironment}/health

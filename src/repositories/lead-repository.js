@@ -172,7 +172,7 @@ export function fromDynamoItem(item) {
   );
 }
 
-function toDynamoValue(value) {
+export function toDynamoValue(value) {
   if (value === null) {
     return { NULL: true };
   }
