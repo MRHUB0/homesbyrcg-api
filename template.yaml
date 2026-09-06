@@ -107,6 +107,8 @@ Resources:
 
   LeadTable:
     Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       TableName: !Sub ${ServiceName}-${AppEnvironment}-leads
       BillingMode: PAY_PER_REQUEST
@@ -430,7 +432,6 @@ Resources:
             - Effect: Allow
               Action:
                 - ses:SendEmail
-                - ses:SendRawEmail
               Resource: !Sub arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/${SesIdentity}
       Events:
         Contact:
@@ -469,7 +470,6 @@ Resources:
             - Effect: Allow
               Action:
                 - ses:SendEmail
-                - ses:SendRawEmail
               Resource: !Sub arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/${SesIdentity}
       Events:
         Leads:
@@ -508,7 +508,6 @@ Resources:
             - Effect: Allow
               Action:
                 - ses:SendEmail
-                - ses:SendRawEmail
               Resource: !Sub arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/${SesIdentity}
       Events:
         Consultation:
@@ -547,7 +546,6 @@ Resources:
             - Effect: Allow
               Action:
                 - ses:SendEmail
-                - ses:SendRawEmail
               Resource: !Sub arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/${SesIdentity}
       Events:
         HomeValue:
