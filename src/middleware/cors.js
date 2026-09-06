@@ -1,8 +1,13 @@
 export function createCorsHeaders(config, origin) {
   const allowedOrigins = config.corsAllowedOrigins;
   const allowAll = allowedOrigins.includes('*');
-  const allowedOrigin =
-    allowAll || allowedOrigins.includes(origin) ? origin || '*' : allowedOrigins[0];
+  const allowedOrigin = allowAll
+    ? origin || '*'
+    : !origin
+      ? (allowedOrigins[0] ?? 'null')
+      : allowedOrigins.includes(origin)
+        ? origin
+        : 'null';
 
   return {
     'Access-Control-Allow-Origin': allowedOrigin,

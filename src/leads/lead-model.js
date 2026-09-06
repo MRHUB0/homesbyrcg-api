@@ -147,6 +147,7 @@ export const DecisionTypeValues = Object.freeze([
 ]);
 
 export const LeadScoreBandValues = Object.freeze(['Low', 'Medium', 'High', 'Very High']);
+const blockedStructuredKeys = new Set(['__proto__', 'prototype', 'constructor']);
 
 function isRecord(value) {
   return (
@@ -373,7 +374,23 @@ function normalizeCommonLeadFields(payload) {
 
 function normalizeStructured(value, fallback) {
   if (value === undefined || value === null) return fallback;
-  return JSON.parse(JSON.stringify(value));
+  return sanitizeStructured(JSON.parse(JSON.stringify(value)));
+}
+
+function sanitizeStructured(value) {
+  if (Array.isArray(value)) {
+    return value.map((item) => sanitizeStructured(item));
+  }
+
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value)
+        .filter(([key]) => !blockedStructuredKeys.has(key))
+        .map(([key, item]) => [key, sanitizeStructured(item)]),
+    );
+  }
+
+  return value;
 }
 
 function splitName(value) {
