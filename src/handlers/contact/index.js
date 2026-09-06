@@ -1,4 +1,5 @@
 import { ContactService } from '../../contact/contact-service.js';
+import { createCrmSyncService } from '../../integrations/crm/crm-factory.js';
 import { createApiHandler } from '../../middleware/api-handler.js';
 import { createContactProvider } from '../../providers/provider-factory.js';
 import { createLeadRepository } from '../../repositories/lead-repository.js';
@@ -9,6 +10,7 @@ export const handler = createApiHandler(async (event, { config, context, logger 
   const contactService = new ContactService({
     provider: createContactProvider(config),
     repository: createLeadRepository(config),
+    crmSyncService: createCrmSyncService(config),
   });
   const payload = parseJsonBody(event);
   let lead;

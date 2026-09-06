@@ -34,6 +34,36 @@ Parameters:
     AllowedValues:
       - mock
       - ses
+  CrmProviderMode:
+    Type: String
+    Default: disabled
+    AllowedValues:
+      - disabled
+      - mock
+      - boldtrail
+  CrmSyncTimeoutMs:
+    Type: Number
+    Default: 6000
+  CrmSyncMaxRetries:
+    Type: Number
+    Default: 3
+  CrmSyncBaseDelayMs:
+    Type: Number
+    Default: 150
+  CrmSyncMaxDelayMs:
+    Type: Number
+    Default: 2000
+  BoldTrailApiBaseUrl:
+    Type: String
+    Default: https://api.kvcore.com
+  BoldTrailApiToken:
+    Type: String
+    Default: ''
+    NoEcho: true
+  PropertyRefSigningSecret:
+    Type: String
+    Default: ''
+    NoEcho: true
   SesSender:
     Type: String
     Default: ''
@@ -62,7 +92,17 @@ Globals:
         CORS_ALLOWED_ORIGINS: !Ref CorsAllowedOrigins
         MAX_REQUEST_BYTES: !Ref MaxRequestBytes
         LEAD_PROVIDER_MODE: !Ref LeadProviderMode
+        CRM_PROVIDER_MODE: !Ref CrmProviderMode
+        CRM_SYNC_TIMEOUT_MS: !Ref CrmSyncTimeoutMs
+        CRM_SYNC_MAX_RETRIES: !Ref CrmSyncMaxRetries
+        CRM_SYNC_BASE_DELAY_MS: !Ref CrmSyncBaseDelayMs
+        CRM_SYNC_MAX_DELAY_MS: !Ref CrmSyncMaxDelayMs
+        BOLDTRAIL_API_BASE_URL: !Ref BoldTrailApiBaseUrl
+        BOLDTRAIL_API_TOKEN: !Ref BoldTrailApiToken
+        PROPERTY_REF_SIGNING_SECRET: !Ref PropertyRefSigningSecret
         LEAD_TABLE_NAME: !Ref LeadTable
+        EVENT_TABLE_NAME: !Ref EventTable
+        CRM_IDEMPOTENCY_TABLE_NAME: !Ref CrmIdempotencyTable
         SES_SENDER: !Ref SesSender
         SES_RECIPIENT: !Ref SesRecipient
         SES_REGION: !Ref AWS::Region
@@ -125,6 +165,79 @@ Resources:
               KeyType: HASH
           Projection:
             ProjectionType: ALL
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+
+  EventTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub ${ServiceName}-${AppEnvironment}-events
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: pk
+          AttributeType: S
+        - AttributeName: sk
+          AttributeType: S
+        - AttributeName: gsiEventPk
+          AttributeType: S
+        - AttributeName: gsiEventSk
+          AttributeType: S
+        - AttributeName: gsiFunnelPk
+          AttributeType: S
+        - AttributeName: gsiFunnelSk
+          AttributeType: S
+        - AttributeName: gsiCampaignPk
+          AttributeType: S
+        - AttributeName: gsiCampaignSk
+          AttributeType: S
+      KeySchema:
+        - AttributeName: pk
+          KeyType: HASH
+        - AttributeName: sk
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: EventNameTimeIndex
+          KeySchema:
+            - AttributeName: gsiEventPk
+              KeyType: HASH
+            - AttributeName: gsiEventSk
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+        - IndexName: FunnelTimeIndex
+          KeySchema:
+            - AttributeName: gsiFunnelPk
+              KeyType: HASH
+            - AttributeName: gsiFunnelSk
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+        - IndexName: CampaignTimeIndex
+          KeySchema:
+            - AttributeName: gsiCampaignPk
+              KeyType: HASH
+            - AttributeName: gsiCampaignSk
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+
+  CrmIdempotencyTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub ${ServiceName}-${AppEnvironment}-crm-idempotency
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: key
+          AttributeType: S
+      KeySchema:
+        - AttributeName: key
+          KeyType: HASH
       PointInTimeRecoverySpecification:
         PointInTimeRecoveryEnabled: true
       SSESpecification:
@@ -429,6 +542,14 @@ Resources:
         - Statement:
             - Effect: Allow
               Action:
+                - dynamodb:PutItem
+                - dynamodb:UpdateItem
+                - dynamodb:DeleteItem
+              Resource:
+                - !GetAtt CrmIdempotencyTable.Arn
+        - Statement:
+            - Effect: Allow
+              Action:
                 - ses:SendEmail
                 - ses:SendRawEmail
               Resource: !Sub arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/${SesIdentity}
@@ -465,6 +586,14 @@ Resources:
               Resource:
                 - !GetAtt LeadTable.Arn
                 - !Sub ${LeadTable.Arn}/index/LeadEmailIndex
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:PutItem
+                - dynamodb:UpdateItem
+                - dynamodb:DeleteItem
+              Resource:
+                - !GetAtt CrmIdempotencyTable.Arn
         - Statement:
             - Effect: Allow
               Action:
@@ -507,6 +636,14 @@ Resources:
         - Statement:
             - Effect: Allow
               Action:
+                - dynamodb:PutItem
+                - dynamodb:UpdateItem
+                - dynamodb:DeleteItem
+              Resource:
+                - !GetAtt CrmIdempotencyTable.Arn
+        - Statement:
+            - Effect: Allow
+              Action:
                 - ses:SendEmail
                 - ses:SendRawEmail
               Resource: !Sub arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/${SesIdentity}
@@ -543,6 +680,14 @@ Resources:
               Resource:
                 - !GetAtt LeadTable.Arn
                 - !Sub ${LeadTable.Arn}/index/LeadEmailIndex
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:PutItem
+                - dynamodb:UpdateItem
+                - dynamodb:DeleteItem
+              Resource:
+                - !GetAtt CrmIdempotencyTable.Arn
         - Statement:
             - Effect: Allow
               Action:

@@ -4,6 +4,7 @@ import { EnvironmentLoader } from './environment-loader.js';
 const logLevels = new Set(['debug', 'info', 'warn', 'error']);
 const appEnvironments = new Set(['local', 'development', 'staging', 'production']);
 const leadProviderModes = new Set(['mock', 'ses']);
+const crmProviderModes = new Set(['disabled', 'mock', 'boldtrail']);
 
 export class ConfigurationLoader {
   static load(env = process.env) {
@@ -26,6 +27,10 @@ export class ConfigurationLoader {
       errors.push('LEAD_PROVIDER_MODE must be one of mock or ses.');
     }
 
+    if (!crmProviderModes.has(config.crmProviderMode)) {
+      errors.push('CRM_PROVIDER_MODE must be one of disabled, mock, or boldtrail.');
+    }
+
     if (config.leadProviderMode === 'ses') {
       validateSesConfiguration(config, errors);
     }
@@ -34,11 +39,60 @@ export class ConfigurationLoader {
       errors.push('MAX_REQUEST_BYTES must be a positive integer.');
     }
 
+    validateCrmConfiguration(config, errors);
+
     if (errors.length > 0) {
       throw new ConfigurationError('Invalid application configuration.', errors);
     }
 
     return Object.freeze(config);
+  }
+}
+
+function validateCrmConfiguration(config, errors) {
+  for (const [key, value] of [
+    ['CRM_SYNC_TIMEOUT_MS', config.crmSyncTimeoutMs],
+    ['CRM_SYNC_BASE_DELAY_MS', config.crmSyncBaseDelayMs],
+    ['CRM_SYNC_MAX_DELAY_MS', config.crmSyncMaxDelayMs],
+  ]) {
+    if (!Number.isFinite(value) || value <= 0) {
+      errors.push(`${key} must be a positive integer.`);
+    }
+  }
+
+  if (!Number.isFinite(config.crmSyncMaxRetries) || config.crmSyncMaxRetries < 0) {
+    errors.push('CRM_SYNC_MAX_RETRIES must be zero or a positive integer.');
+  }
+
+  if (
+    Number.isFinite(config.crmSyncBaseDelayMs) &&
+    Number.isFinite(config.crmSyncMaxDelayMs) &&
+    config.crmSyncBaseDelayMs > config.crmSyncMaxDelayMs
+  ) {
+    errors.push('CRM_SYNC_BASE_DELAY_MS must be less than or equal to CRM_SYNC_MAX_DELAY_MS.');
+  }
+
+  if (config.crmProviderMode === 'boldtrail') {
+    if (!config.boldTrailApiToken) {
+      errors.push('BOLDTRAIL_API_TOKEN is required when CRM_PROVIDER_MODE is boldtrail.');
+    }
+
+    if (!isHttpUrl(config.boldTrailApiBaseUrl)) {
+      errors.push('BOLDTRAIL_API_BASE_URL must be a valid HTTP or HTTPS URL.');
+    }
+  }
+}
+
+function isHttpUrl(value) {
+  if (typeof value !== 'string' || value.length === 0) {
+    return false;
+  }
+
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch {
+    return false;
   }
 }
 

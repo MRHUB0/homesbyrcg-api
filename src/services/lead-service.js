@@ -3,10 +3,11 @@ import { redactLead } from '../leads/redaction.js';
 import { nowIso } from '../shared/time.js';
 
 export class LeadService {
-  constructor({ provider, repository, leadType }) {
+  constructor({ provider, repository, leadType, crmSyncService = null }) {
     this.provider = provider;
     this.repository = repository;
     this.leadType = leadType;
+    this.crmSyncService = crmSyncService;
   }
 
   async submitLead(lead, { context, logger }) {
@@ -57,6 +58,22 @@ export class LeadService {
         provider: result.provider,
         providerStatus: result.status,
       });
+
+      if (this.crmSyncService) {
+        try {
+          await this.crmSyncService.syncLead(updatedLead, { context, logger });
+        } catch (error) {
+          logger.error('crm_sync_lead_failed', {
+            leadId: updatedLead.leadId,
+            leadType: this.leadType,
+            provider: this.crmSyncService.adapter?.name,
+            error: {
+              name: error.name,
+              message: error.message,
+            },
+          });
+        }
+      }
 
       return {
         ...result,
