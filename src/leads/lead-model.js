@@ -160,6 +160,14 @@ function isScoreReasons(value) {
   return value === undefined || value === null || (Array.isArray(value) && value.length <= 20);
 }
 
+function isConsent(value) {
+  return isRecord(value);
+}
+
+function isAttribution(value) {
+  return isRecord(value);
+}
+
 const commonLeadSchema = {
   firstName: [Validators.required(), Validators.length({ min: 1, max: 80 })],
   lastName: [Validators.length({ max: 80 })],
@@ -208,6 +216,14 @@ const commonLeadSchema = {
   leadScoreReasons: [
     Validators.custom(isScoreReasons, 'Lead score reasons must contain no more than 20 entries.'),
   ],
+  visitorId: [Validators.length({ max: 120 })],
+  sessionId: [Validators.length({ max: 120 })],
+  journeyId: [Validators.length({ max: 120 })],
+  propertyRef: [Validators.length({ max: 240 })],
+  funnel: [Validators.length({ max: 120 })],
+  landingPage: [Validators.length({ max: 2048 })],
+  consent: [Validators.custom(isConsent, 'Consent must be an object.')],
+  attribution: [Validators.custom(isAttribution, 'Attribution must be an object.')],
   metadata: [Validators.custom(isRecord, 'Metadata must be an object.')],
 };
 
@@ -293,7 +309,9 @@ export function buildCanonicalLead({
       journeyTimeline: normalizedRequest.journeyTimeline || [],
       leadScoreBand: valueOrNull(normalizedRequest.leadScoreBand),
       leadScoreReasons: normalizedRequest.leadScoreReasons || [],
+      analyticsContext: buildAnalyticsContext(normalizedRequest),
     },
+    idempotencyKey: valueOrNull(normalizedRequest.idempotencyKey ?? context.idempotencyKey),
     provider: null,
     providerStatus: null,
     createdAt,
@@ -365,7 +383,58 @@ function normalizeCommonLeadFields(payload) {
       payload?.leadScoreReasons ?? embeddedLead.leadScoreReasons,
       [],
     ),
+    visitorId: normalizeString(payload?.visitorId ?? embeddedLead.visitorId),
+    sessionId: normalizeString(payload?.sessionId ?? embeddedLead.sessionId),
+    journeyId: normalizeString(payload?.journeyId ?? embeddedLead.journeyId),
+    propertyRef: normalizeString(payload?.propertyRef ?? embeddedLead.propertyRef),
+    funnel: normalizeString(payload?.funnel ?? embeddedLead.funnel),
+    landingPage: normalizeString(
+      payload?.landingPage ??
+        embeddedLead.landingPage ??
+        payload?.currentPage ??
+        embeddedLead.currentPage,
+    ),
+    consent: normalizeStructured(payload?.consent ?? embeddedLead.consent, {}),
+    attribution: normalizeStructured(
+      {
+        ...normalizeStructured(payload?.attribution ?? embeddedLead.attribution, {}),
+        utm_source: normalizeString(
+          payload?.utm_source ?? payload?.utm?.source ?? payload?.attribution?.utm_source,
+        ),
+        utm_medium: normalizeString(
+          payload?.utm_medium ?? payload?.utm?.medium ?? payload?.attribution?.utm_medium,
+        ),
+        utm_campaign: normalizeString(
+          payload?.utm_campaign ?? payload?.utm?.campaign ?? payload?.attribution?.utm_campaign,
+        ),
+        utm_term: normalizeString(
+          payload?.utm_term ?? payload?.utm?.term ?? payload?.attribution?.utm_term,
+        ),
+        utm_content: normalizeString(
+          payload?.utm_content ?? payload?.utm?.content ?? payload?.attribution?.utm_content,
+        ),
+        referrer: normalizeString(payload?.referrer ?? payload?.referral),
+        landingPage: normalizeString(
+          payload?.landingPage ?? payload?.currentPage ?? embeddedLead.currentPage,
+        ),
+      },
+      {},
+    ),
+    idempotencyKey: normalizeString(payload?.idempotencyKey ?? embeddedLead.idempotencyKey),
     metadata: normalizeStructured(payload?.metadata ?? embeddedLead.metadata, {}),
+  };
+}
+
+function buildAnalyticsContext(normalizedRequest) {
+  return {
+    visitorId: valueOrNull(normalizedRequest.visitorId),
+    sessionId: valueOrNull(normalizedRequest.sessionId),
+    journeyId: valueOrNull(normalizedRequest.journeyId ?? normalizedRequest.sessionId),
+    propertyRef: valueOrNull(normalizedRequest.propertyRef),
+    funnel: valueOrNull(normalizedRequest.funnel),
+    landingPage: valueOrNull(normalizedRequest.landingPage ?? normalizedRequest.currentPage),
+    consent: normalizedRequest.consent || {},
+    attribution: normalizedRequest.attribution || {},
   };
 }
 

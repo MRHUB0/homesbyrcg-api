@@ -4,9 +4,11 @@
 
 ```http
 GET /health
+POST /leads
 POST /contact
 POST /consultation
 POST /home-value
+POST /events
 ```
 
 Error responses use the canonical error envelope. Successful lead submissions return a non-PII
@@ -114,3 +116,28 @@ Allowed values:
 
 - `leadIntent`: `home-valuation`, `sell-my-home`, `market-analysis`
 - `propertyType`: `single-family`, `condo`, `townhome`, `multi-family`, `land`
+
+## POST /events
+
+```json
+{
+  "eventName": "funnel_started",
+  "eventVersion": "1.0",
+  "occurredAt": "2026-09-05T12:00:00.000Z",
+  "visitorId": "visitor-123",
+  "sessionId": "session-123",
+  "journeyId": "journey-123",
+  "funnel": "home-value",
+  "landingPage": "/home-value",
+  "attribution": {
+    "utm_source": "google",
+    "utm_medium": "cpc",
+    "utm_campaign": "fall-home-value"
+  },
+  "metadata": {
+    "entryVariant": "hero"
+  }
+}
+```
+
+Successful event submissions return `202` with event acceptance metadata and duplicate indicator.

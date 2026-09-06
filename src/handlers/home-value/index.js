@@ -1,14 +1,20 @@
+import { AnalyticsService } from '../../analytics/analytics-service.js';
 import { HomeValueService } from '../../home-value/home-value-service.js';
 import { createApiHandler } from '../../middleware/api-handler.js';
 import { createHomeValueProvider } from '../../providers/provider-factory.js';
+import { createAnalyticsEventRepository } from '../../repositories/analytics-event-repository.js';
 import { createLeadRepository } from '../../repositories/lead-repository.js';
 import { ResponseBuilder } from '../../responses/response-builder.js';
 import { parseJsonBody } from '../../shared/http-body.js';
 
 export const handler = createApiHandler(async (event, { config, context, logger }) => {
+  const analyticsService = new AnalyticsService({
+    repository: createAnalyticsEventRepository(config),
+  });
   const homeValueService = new HomeValueService({
     provider: createHomeValueProvider(config),
     repository: createLeadRepository(config),
+    analyticsService,
   });
   const payload = parseJsonBody(event);
   let lead;

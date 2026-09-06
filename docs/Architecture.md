@@ -15,7 +15,9 @@ The foundation provides:
 - contact endpoint
 - consultation endpoint
 - home value endpoint
+- analytics events endpoint
 - DynamoDB lead persistence
+- DynamoDB analytics event persistence
 - repository abstraction for lead storage
 - provider abstraction for lead delivery
 
@@ -54,3 +56,6 @@ API latency, and SES rejects. API Gateway and Lambda log groups retain logs for 
 
 Authentication, AI, and CRM integrations are intentionally absent. Future endpoints should compose
 the shared middleware and return the canonical response model.
+
+Canonical analytics events are accepted at `POST /events` and persisted to
+`AnalyticsEventTable` for deterministic funnel, attribution, and conversion measurement.

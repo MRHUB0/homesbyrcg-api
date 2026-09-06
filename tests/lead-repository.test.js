@@ -67,6 +67,25 @@ test('in-memory lead repository rejects duplicate lead ids', async () => {
   await assert.rejects(() => repository.createLead(lead), ConflictError);
 });
 
+test('in-memory lead repository reuses persisted lead for matching idempotency key', async () => {
+  const repository = new InMemoryLeadRepository();
+  const first = await repository.createLead({
+    ...lead,
+    leadId: 'lead-ido-1',
+    idempotencyKey: 'idem-123',
+  });
+
+  const replay = await repository.createLead({
+    ...lead,
+    leadId: 'lead-ido-2',
+    idempotencyKey: 'idem-123',
+  });
+
+  assert.equal(first.leadId, 'lead-ido-1');
+  assert.equal(replay.leadId, 'lead-ido-1');
+  assert.equal(replay.idempotencyReplay, true);
+});
+
 test('lead repository sends DynamoDB commands for create, get, update, and email query', async () => {
   const commands = [];
   const client = {

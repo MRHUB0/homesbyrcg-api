@@ -25,8 +25,8 @@ function allowedMetadata(metadata = {}) {
 }
 
 export class GenericLeadService extends LeadService {
-  constructor({ provider, repository }) {
-    super({ provider, repository, leadType: LeadTypes.GENERIC });
+  constructor({ provider, repository, analyticsService }) {
+    super({ provider, repository, leadType: LeadTypes.GENERIC, analyticsService });
   }
 
   normalize(payload, { context }) {

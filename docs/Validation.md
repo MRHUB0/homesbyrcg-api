@@ -33,6 +33,17 @@ Canonical lead fields:
 - campaign
 - referral
 - notes
+- leadContext
+- journeyTimeline
+- visitorId
+- sessionId
+- journeyId
+- propertyRef
+- funnel
+- landingPage
+- consent
+- attribution
+- idempotencyKey
 
 `POST /contact` accepts `message` and maps it to canonical `notes`.
 
@@ -43,3 +54,6 @@ Endpoint-specific required fields:
 
 Enums are defined in the lead validation modules and cover lead intent, consultation options, and
 property type.
+
+`POST /events` uses canonical analytics event validation, including event-specific required fields,
+deterministic stage/classification derivation, and metadata PII sanitization.
