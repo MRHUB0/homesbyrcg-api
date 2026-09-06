@@ -25,11 +25,6 @@ export const handler = createApiHandler(async (event, { config, context, logger 
     leadIntelligenceRepository: createLeadIntelligenceRepository(config),
     leadIntelligenceMetrics: new LeadIntelligenceMetrics(),
     crmSyncService: createCrmSyncService(config),
-    analyticsService,
-    leadIntelligenceService: new LeadIntelligenceService(),
-    leadIntelligenceRepository: createLeadIntelligenceRepository(config),
-    leadIntelligenceMetrics: new LeadIntelligenceMetrics(),
-    crmSyncService: createCrmSyncService(config),
   });
   const payload = parseJsonBody(event);
   let lead;

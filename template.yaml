@@ -599,6 +599,90 @@ Resources:
       ComparisonOperator: GreaterThanOrEqualToThreshold
       TreatMissingData: notBreaching
 
+  PropertySearchFailureRateAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${ServiceName}-${AppEnvironment}-property-search-failure-rate
+      AlarmDescription: Property search failure rate is above threshold.
+      Metrics:
+        - Id: failureRate
+          Expression: IF(requests > 0, (failures / requests) * 100, 0)
+          Label: Property search failure rate percent
+          ReturnData: true
+        - Id: requests
+          MetricStat:
+            {
+              Metric:
+                {
+                  Namespace: AWS/Lambda,
+                  MetricName: Invocations,
+                  Dimensions: [{ Name: FunctionName, Value: !Ref PropertySearchFunction }],
+                },
+              Period: 300,
+              Stat: Sum,
+            }
+          ReturnData: false
+        - Id: failures
+          MetricStat:
+            {
+              Metric:
+                {
+                  Namespace: AWS/Lambda,
+                  MetricName: Errors,
+                  Dimensions: [{ Name: FunctionName, Value: !Ref PropertySearchFunction }],
+                },
+              Period: 300,
+              Stat: Sum,
+            }
+          ReturnData: false
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: 5
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+
+  PropertyValueFailureRateAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${ServiceName}-${AppEnvironment}-property-value-failure-rate
+      AlarmDescription: Property value failure rate is above threshold.
+      Metrics:
+        - Id: failureRate
+          Expression: IF(requests > 0, (failures / requests) * 100, 0)
+          Label: Property value failure rate percent
+          ReturnData: true
+        - Id: requests
+          MetricStat:
+            {
+              Metric:
+                {
+                  Namespace: AWS/Lambda,
+                  MetricName: Invocations,
+                  Dimensions: [{ Name: FunctionName, Value: !Ref PropertyValueFunction }],
+                },
+              Period: 300,
+              Stat: Sum,
+            }
+          ReturnData: false
+        - Id: failures
+          MetricStat:
+            {
+              Metric:
+                {
+                  Namespace: AWS/Lambda,
+                  MetricName: Errors,
+                  Dimensions: [{ Name: FunctionName, Value: !Ref PropertyValueFunction }],
+                },
+              Period: 300,
+              Stat: Sum,
+            }
+          ReturnData: false
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: 5
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+
   Api5xxAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
@@ -683,17 +767,6 @@ Resources:
               Resource:
                 - !GetAtt AnalyticsEventTable.Arn
                 - !Sub ${AnalyticsEventTable.Arn}/index/*
-                - !GetAtt LeadIntelligenceTable.Arn
-                - !Sub ${LeadTable.Arn}/index/LeadIdempotencyIndex
-        - Statement:
-            - Effect: Allow
-              Action:
-                - dynamodb:GetItem
-                - dynamodb:PutItem
-                - dynamodb:Query
-              Resource:
-                - !GetAtt AnalyticsEventTable.Arn
-                - !Sub ${AnalyticsEventTable.Arn}/index/*
         - Statement:
             - Effect: Allow
               Action:
@@ -748,17 +821,6 @@ Resources:
               Resource:
                 - !GetAtt LeadTable.Arn
                 - !Sub ${LeadTable.Arn}/index/LeadEmailIndex
-                - !Sub ${LeadTable.Arn}/index/LeadIdempotencyIndex
-        - Statement:
-            - Effect: Allow
-              Action:
-                - dynamodb:GetItem
-                - dynamodb:PutItem
-                - dynamodb:Query
-              Resource:
-                - !GetAtt AnalyticsEventTable.Arn
-                - !Sub ${AnalyticsEventTable.Arn}/index/*
-                - !GetAtt LeadIntelligenceTable.Arn
                 - !Sub ${LeadTable.Arn}/index/LeadIdempotencyIndex
         - Statement:
             - Effect: Allow
@@ -833,17 +895,6 @@ Resources:
               Resource:
                 - !GetAtt AnalyticsEventTable.Arn
                 - !Sub ${AnalyticsEventTable.Arn}/index/*
-                - !GetAtt LeadIntelligenceTable.Arn
-                - !Sub ${LeadTable.Arn}/index/LeadIdempotencyIndex
-        - Statement:
-            - Effect: Allow
-              Action:
-                - dynamodb:GetItem
-                - dynamodb:PutItem
-                - dynamodb:Query
-              Resource:
-                - !GetAtt AnalyticsEventTable.Arn
-                - !Sub ${AnalyticsEventTable.Arn}/index/*
         - Statement:
             - Effect: Allow
               Action:
@@ -898,17 +949,6 @@ Resources:
               Resource:
                 - !GetAtt LeadTable.Arn
                 - !Sub ${LeadTable.Arn}/index/LeadEmailIndex
-                - !Sub ${LeadTable.Arn}/index/LeadIdempotencyIndex
-        - Statement:
-            - Effect: Allow
-              Action:
-                - dynamodb:GetItem
-                - dynamodb:PutItem
-                - dynamodb:Query
-              Resource:
-                - !GetAtt AnalyticsEventTable.Arn
-                - !Sub ${AnalyticsEventTable.Arn}/index/*
-                - !GetAtt LeadIntelligenceTable.Arn
                 - !Sub ${LeadTable.Arn}/index/LeadIdempotencyIndex
         - Statement:
             - Effect: Allow

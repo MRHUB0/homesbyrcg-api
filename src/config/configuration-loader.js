@@ -30,6 +30,7 @@ export class ConfigurationLoader {
 
     if (!propertyProviderModes.has(config.propertyProviderMode)) {
       errors.push('PROPERTY_PROVIDER_MODE must be one of mock or franklin.');
+    }
 
     if (!crmProviderModes.has(config.crmProviderMode)) {
       errors.push('CRM_PROVIDER_MODE must be one of disabled, mock, or boldtrail.');
