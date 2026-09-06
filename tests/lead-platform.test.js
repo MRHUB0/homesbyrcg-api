@@ -77,6 +77,7 @@ test('contact service normalizes into canonical lead model', () => {
     'leadContext',
     'journeyTimeline',
     'metadata',
+    'idempotencyKey',
     'provider',
     'providerStatus',
     'createdAt',

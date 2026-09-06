@@ -19,8 +19,10 @@ HomesByRCG.com
 Implemented routes:
 
 - `POST /contact`
+- `POST /leads`
 - `POST /consultation`
 - `POST /home-value`
+- `POST /events`
 
 ## Canonical Lead Model
 
@@ -121,6 +123,17 @@ Table: `LeadTable`
 - Recovery: point-in-time recovery enabled
 - Encryption: server-side encryption enabled
 - GSI: `LeadEmailIndex` with `email` as the partition key for `findLeadByEmail()`
+- GSI: `LeadIdempotencyIndex` with `idempotencyKey` as the partition key for replay protection
+
+Table: `AnalyticsEventTable`
+
+- Partition key: `eventId`
+- Sort key: none
+- Billing: `PAY_PER_REQUEST`
+- Recovery: point-in-time recovery enabled
+- Encryption: server-side encryption enabled
+- GSIs for `visitorId`, `sessionId`, `journeyId`, `leadId`, `funnel`, `attributionCampaign`,
+  `landingPage`, and `propertyRef` by `occurredAt`
 
 Allowed DynamoDB actions for lead functions are `GetItem`, `PutItem`, `UpdateItem`, and `Query`.
 

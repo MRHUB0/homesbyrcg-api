@@ -3,10 +3,11 @@ import { redactLead } from '../leads/redaction.js';
 import { nowIso } from '../shared/time.js';
 
 export class LeadService {
-  constructor({ provider, repository, leadType }) {
+  constructor({ provider, repository, leadType, analyticsService = null }) {
     this.provider = provider;
     this.repository = repository;
     this.leadType = leadType;
+    this.analyticsService = analyticsService;
   }
 
   async submitLead(lead, { context, logger }) {
@@ -15,6 +16,24 @@ export class LeadService {
     });
 
     const persistedLead = await this.createLead(lead, { logger });
+
+    await this.trackLeadLifecycle(persistedLead, { context, logger });
+
+    if (persistedLead.idempotencyReplay && persistedLead.providerStatus) {
+      logger.info('lead_idempotent_replay', {
+        leadId: persistedLead.leadId,
+        leadType: this.leadType,
+        providerStatus: persistedLead.providerStatus,
+      });
+
+      return {
+        provider: persistedLead.provider ?? this.provider.name ?? 'unknown',
+        status: persistedLead.providerStatus,
+        requestId: context.requestId,
+        lead: persistedLead,
+        duplicate: true,
+      };
+    }
 
     try {
       logger.info('provider_started', {
@@ -100,6 +119,7 @@ export class LeadService {
       leadId: persistedLead.leadId,
       leadType: this.leadType,
       status: persistedLead.status,
+      duplicate: Boolean(persistedLead.idempotencyReplay),
     });
 
     return persistedLead;
@@ -125,5 +145,13 @@ export class LeadService {
     });
 
     return updatedLead;
+  }
+
+  async trackLeadLifecycle(lead, { context, logger }) {
+    if (!this.analyticsService) {
+      return;
+    }
+
+    await this.analyticsService.trackLeadLifecycle({ lead, context, logger });
   }
 }

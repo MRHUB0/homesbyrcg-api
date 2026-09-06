@@ -69,6 +69,7 @@ Globals:
         PROPERTY_CACHE_TTL_SECONDS: '900'
         PROPERTY_VALUE_REQUIRE_LEAD_CONTEXT: 'true'
         LEAD_TABLE_NAME: !Ref LeadTable
+        ANALYTICS_EVENT_TABLE_NAME: !Ref AnalyticsEventTable
         SES_SENDER: !Ref SesSender
         SES_RECIPIENT: !Ref SesRecipient
         SES_REGION: !Ref AWS::Region
@@ -123,6 +124,8 @@ Resources:
           AttributeType: S
         - AttributeName: email
           AttributeType: S
+        - AttributeName: idempotencyKey
+          AttributeType: S
       KeySchema:
         - AttributeName: leadId
           KeyType: HASH
@@ -131,6 +134,111 @@ Resources:
           KeySchema:
             - AttributeName: email
               KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+        - IndexName: LeadIdempotencyIndex
+          KeySchema:
+            - AttributeName: idempotencyKey
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+
+  AnalyticsEventTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub ${ServiceName}-${AppEnvironment}-analytics-events
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: eventId
+          AttributeType: S
+        - AttributeName: visitorId
+          AttributeType: S
+        - AttributeName: sessionId
+          AttributeType: S
+        - AttributeName: journeyId
+          AttributeType: S
+        - AttributeName: leadId
+          AttributeType: S
+        - AttributeName: funnel
+          AttributeType: S
+        - AttributeName: attributionCampaign
+          AttributeType: S
+        - AttributeName: landingPage
+          AttributeType: S
+        - AttributeName: propertyRef
+          AttributeType: S
+        - AttributeName: occurredAt
+          AttributeType: S
+      KeySchema:
+        - AttributeName: eventId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: VisitorOccurredAtIndex
+          KeySchema:
+            - AttributeName: visitorId
+              KeyType: HASH
+            - AttributeName: occurredAt
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+        - IndexName: SessionOccurredAtIndex
+          KeySchema:
+            - AttributeName: sessionId
+              KeyType: HASH
+            - AttributeName: occurredAt
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+        - IndexName: JourneyOccurredAtIndex
+          KeySchema:
+            - AttributeName: journeyId
+              KeyType: HASH
+            - AttributeName: occurredAt
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+        - IndexName: LeadOccurredAtIndex
+          KeySchema:
+            - AttributeName: leadId
+              KeyType: HASH
+            - AttributeName: occurredAt
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+        - IndexName: FunnelOccurredAtIndex
+          KeySchema:
+            - AttributeName: funnel
+              KeyType: HASH
+            - AttributeName: occurredAt
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+        - IndexName: CampaignOccurredAtIndex
+          KeySchema:
+            - AttributeName: attributionCampaign
+              KeyType: HASH
+            - AttributeName: occurredAt
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+        - IndexName: LandingOccurredAtIndex
+          KeySchema:
+            - AttributeName: landingPage
+              KeyType: HASH
+            - AttributeName: occurredAt
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+        - IndexName: PropertyOccurredAtIndex
+          KeySchema:
+            - AttributeName: propertyRef
+              KeyType: HASH
+            - AttributeName: occurredAt
+              KeyType: RANGE
           Projection:
             ProjectionType: ALL
       PointInTimeRecoverySpecification:
@@ -172,6 +280,38 @@ Resources:
             Path: /openapi.yaml
             Method: GET
 
+  EventsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${ServiceName}-${AppEnvironment}-events
+      Description: Canonical analytics event intake endpoint for Homes by RCG.
+      CodeUri: .
+      Handler: src/handlers/events/index.handler
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:Query
+              Resource:
+                - !GetAtt AnalyticsEventTable.Arn
+                - !Sub ${AnalyticsEventTable.Arn}/index/*
+      Events:
+        Events:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /events
+            Method: POST
+        EventsOptions:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /events
+            Method: OPTIONS
+
   LambdaErrorsAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
@@ -203,6 +343,19 @@ Resources:
                   Namespace: AWS/Lambda,
                   MetricName: Errors,
                   Dimensions: [{ Name: FunctionName, Value: !Ref OpenApiFunction }],
+                },
+              Period: 300,
+              Stat: Sum,
+            }
+          ReturnData: false
+        - Id: events
+          MetricStat:
+            {
+              Metric:
+                {
+                  Namespace: AWS/Lambda,
+                  MetricName: Errors,
+                  Dimensions: [{ Name: FunctionName, Value: !Ref EventsFunction }],
                 },
               Period: 300,
               Stat: Sum,
@@ -297,6 +450,19 @@ Resources:
                   Namespace: AWS/Lambda,
                   MetricName: Throttles,
                   Dimensions: [{ Name: FunctionName, Value: !Ref OpenApiFunction }],
+                },
+              Period: 300,
+              Stat: Sum,
+            }
+          ReturnData: false
+        - Id: events
+          MetricStat:
+            {
+              Metric:
+                {
+                  Namespace: AWS/Lambda,
+                  MetricName: Throttles,
+                  Dimensions: [{ Name: FunctionName, Value: !Ref EventsFunction }],
                 },
               Period: 300,
               Stat: Sum,
@@ -434,6 +600,16 @@ Resources:
               Resource:
                 - !GetAtt LeadTable.Arn
                 - !Sub ${LeadTable.Arn}/index/LeadEmailIndex
+                - !Sub ${LeadTable.Arn}/index/LeadIdempotencyIndex
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:Query
+              Resource:
+                - !GetAtt AnalyticsEventTable.Arn
+                - !Sub ${AnalyticsEventTable.Arn}/index/*
         - Statement:
             - Effect: Allow
               Action:
@@ -472,6 +648,16 @@ Resources:
               Resource:
                 - !GetAtt LeadTable.Arn
                 - !Sub ${LeadTable.Arn}/index/LeadEmailIndex
+                - !Sub ${LeadTable.Arn}/index/LeadIdempotencyIndex
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:Query
+              Resource:
+                - !GetAtt AnalyticsEventTable.Arn
+                - !Sub ${AnalyticsEventTable.Arn}/index/*
         - Statement:
             - Effect: Allow
               Action:
@@ -510,6 +696,16 @@ Resources:
               Resource:
                 - !GetAtt LeadTable.Arn
                 - !Sub ${LeadTable.Arn}/index/LeadEmailIndex
+                - !Sub ${LeadTable.Arn}/index/LeadIdempotencyIndex
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:Query
+              Resource:
+                - !GetAtt AnalyticsEventTable.Arn
+                - !Sub ${AnalyticsEventTable.Arn}/index/*
         - Statement:
             - Effect: Allow
               Action:
@@ -548,6 +744,16 @@ Resources:
               Resource:
                 - !GetAtt LeadTable.Arn
                 - !Sub ${LeadTable.Arn}/index/LeadEmailIndex
+                - !Sub ${LeadTable.Arn}/index/LeadIdempotencyIndex
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:Query
+              Resource:
+                - !GetAtt AnalyticsEventTable.Arn
+                - !Sub ${AnalyticsEventTable.Arn}/index/*
         - Statement:
             - Effect: Allow
               Action:
@@ -705,6 +911,12 @@ Outputs:
   PropertyValueEndpoint:
     Description: Property value endpoint URL.
     Value: !Sub https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/${AppEnvironment}/property-value
+  EventsEndpoint:
+    Description: Analytics events endpoint URL.
+    Value: !Sub https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/${AppEnvironment}/events
+  AnalyticsEventTableName:
+    Description: DynamoDB table used for canonical analytics event persistence.
+    Value: !Ref AnalyticsEventTable
   OpenApiEndpoint:
     Description: OpenAPI contract endpoint URL.
     Value: !Sub https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/${AppEnvironment}/openapi.yaml
@@ -714,6 +926,9 @@ Outputs:
   OpenApiFunctionArn:
     Description: OpenAPI Lambda function ARN.
     Value: !GetAtt OpenApiFunction.Arn
+  EventsFunctionArn:
+    Description: Analytics events Lambda function ARN.
+    Value: !GetAtt EventsFunction.Arn
   ContactFunctionArn:
     Description: Contact Lambda function ARN.
     Value: !GetAtt ContactFunction.Arn

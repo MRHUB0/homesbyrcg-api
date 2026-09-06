@@ -18,7 +18,9 @@ The foundation provides:
 - property search endpoint
 - property record resolution endpoint
 - property value endpoints
+- analytics events endpoint
 - DynamoDB lead persistence
+- DynamoDB analytics event persistence
 - repository abstraction for lead storage
 - provider abstraction for lead delivery
 
@@ -73,3 +75,6 @@ API Gateway
 Property identity is canonicalized as `propertyRef` and derived from parcel identity when available,
 falling back to normalized-address identity. Provider identity is retained separately under
 `identity.providerIdentity`.
+
+Canonical analytics events are accepted at `POST /events` and persisted to
+`AnalyticsEventTable` for deterministic funnel, attribution, and conversion measurement.

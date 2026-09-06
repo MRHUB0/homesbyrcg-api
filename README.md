@@ -24,12 +24,14 @@ npm run sam-local
 ```http
 GET /health
 POST /contact
+POST /leads
 POST /consultation
 POST /home-value
 POST /property-search
 POST /property-record/resolve
 POST /property-record/value
 POST /property-value
+POST /events
 ```
 
 Lead submission responses return `success`, `message`, `leadId`, `status`, `requestId`,
@@ -50,6 +52,9 @@ API Gateway -> Lambda Handler -> PropertyService -> PropertyProvider (mock|Frank
 `leadId` context (`PROPERTY_VALUE_REQUIRE_LEAD_CONTEXT=true`).
 
 ````
+
+Canonical analytics events are ingested through `/events` and persisted to `AnalyticsEventTable`
+for funnel measurement, attribution, and conversion observability.
 
 Lead delivery is configuration-driven. Use `LEAD_PROVIDER_MODE=mock` for local development and
 `LEAD_PROVIDER_MODE=ses` for production email delivery through Amazon SES. Deployed environments

@@ -1,14 +1,20 @@
+import { AnalyticsService } from '../../analytics/analytics-service.js';
 import { ConsultationService } from '../../consultation/consultation-service.js';
 import { createApiHandler } from '../../middleware/api-handler.js';
 import { createConsultationProvider } from '../../providers/provider-factory.js';
+import { createAnalyticsEventRepository } from '../../repositories/analytics-event-repository.js';
 import { createLeadRepository } from '../../repositories/lead-repository.js';
 import { ResponseBuilder } from '../../responses/response-builder.js';
 import { parseJsonBody } from '../../shared/http-body.js';
 
 export const handler = createApiHandler(async (event, { config, context, logger }) => {
+  const analyticsService = new AnalyticsService({
+    repository: createAnalyticsEventRepository(config),
+  });
   const consultationService = new ConsultationService({
     provider: createConsultationProvider(config),
     repository: createLeadRepository(config),
+    analyticsService,
   });
   const payload = parseJsonBody(event);
   let lead;

@@ -9,15 +9,33 @@ import {
 import { ConflictError, IntegrationError } from '../errors/index.js';
 
 export const LeadEmailIndexName = 'LeadEmailIndex';
+export const LeadIdempotencyIndexName = 'LeadIdempotencyIndex';
 
 export class LeadRepository {
-  constructor({ tableName, client = new DynamoDBClient({}), emailIndexName = LeadEmailIndexName }) {
+  constructor({
+    tableName,
+    client = new DynamoDBClient({}),
+    emailIndexName = LeadEmailIndexName,
+    idempotencyIndexName = LeadIdempotencyIndexName,
+  }) {
     this.tableName = tableName;
     this.client = client;
     this.emailIndexName = emailIndexName;
+    this.idempotencyIndexName = idempotencyIndexName;
   }
 
   async createLead(lead) {
+    if (lead.idempotencyKey) {
+      const existing = await this.findLeadByIdempotencyKey(lead.idempotencyKey);
+
+      if (existing) {
+        return {
+          ...existing,
+          idempotencyReplay: true,
+        };
+      }
+    }
+
     try {
       await this.client.send(
         new PutItemCommand({
@@ -111,6 +129,34 @@ export class LeadRepository {
       throw toRepositoryError(error);
     }
   }
+
+  async findLeadByIdempotencyKey(idempotencyKey) {
+    if (!idempotencyKey) {
+      return null;
+    }
+
+    try {
+      const result = await this.client.send(
+        new QueryCommand({
+          TableName: this.tableName,
+          IndexName: this.idempotencyIndexName,
+          KeyConditionExpression: '#idempotencyKey = :idempotencyKey',
+          ExpressionAttributeNames: {
+            '#idempotencyKey': 'idempotencyKey',
+          },
+          ExpressionAttributeValues: {
+            ':idempotencyKey': toDynamoValue(idempotencyKey),
+          },
+          Limit: 1,
+          ScanIndexForward: false,
+        }),
+      );
+
+      return result.Items?.[0] ? fromDynamoItem(result.Items[0]) : null;
+    } catch (error) {
+      throw toRepositoryError(error);
+    }
+  }
 }
 
 export class InMemoryLeadRepository {
@@ -119,6 +165,17 @@ export class InMemoryLeadRepository {
   }
 
   async createLead(lead) {
+    if (lead.idempotencyKey) {
+      const existing = await this.findLeadByIdempotencyKey(lead.idempotencyKey);
+
+      if (existing) {
+        return {
+          ...existing,
+          idempotencyReplay: true,
+        };
+      }
+    }
+
     if (this.leads.has(lead.leadId)) {
       throw new ConflictError('Lead already exists.', [{ field: 'leadId' }]);
     }
@@ -148,11 +205,22 @@ export class InMemoryLeadRepository {
     const lead = Array.from(this.leads.values()).find((item) => item.email === email);
     return lead ? cloneLead(lead) : null;
   }
+
+  async findLeadByIdempotencyKey(idempotencyKey) {
+    const lead = Array.from(this.leads.values()).find(
+      (item) => item.idempotencyKey === idempotencyKey,
+    );
+    return lead ? cloneLead(lead) : null;
+  }
 }
 
 export function createLeadRepository(config) {
   if (!config.leadTableName) {
-    return new InMemoryLeadRepository();
+    if (!globalThis.__homesByRcgInMemoryLeadRepository) {
+      globalThis.__homesByRcgInMemoryLeadRepository = new InMemoryLeadRepository();
+    }
+
+    return globalThis.__homesByRcgInMemoryLeadRepository;
   }
 
   return new LeadRepository({ tableName: config.leadTableName });
@@ -172,7 +240,7 @@ export function fromDynamoItem(item) {
   );
 }
 
-function toDynamoValue(value) {
+export function toDynamoValue(value) {
   if (value === null) {
     return { NULL: true };
   }
