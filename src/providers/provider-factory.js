@@ -6,8 +6,6 @@ import { SESContactProvider } from './contact/ses-provider.js';
 import { SESHomeValueProvider } from './home-value/ses-provider.js';
 import { MockGenericLeadProvider } from './generic/mock-provider.js';
 import { SESGenericLeadProvider } from './generic/ses-provider.js';
-import { FranklinGisPropertySearchProvider } from './property-search/franklin-gis-provider.js';
-import { FranklinCountyAuditorPropertyRecordProvider } from './property-record/franklin-county-auditor-provider.js';
 import { BoldTrailCrmAdapter } from '../integrations/crm/boldtrail/adapter.js';
 import { BoldTrailClient } from '../integrations/crm/boldtrail/client.js';
 import { DisabledCrmAdapter } from '../integrations/crm/adapters/disabled-adapter.js';
@@ -35,14 +33,6 @@ export function createHomeValueProvider(config) {
   return config.leadProviderMode === 'ses'
     ? new SESHomeValueProvider({ config })
     : new MockHomeValueProvider();
-}
-
-export function createPropertySearchProvider() {
-  return new FranklinGisPropertySearchProvider();
-}
-
-export function createPropertyRecordProvider() {
-  return new FranklinCountyAuditorPropertyRecordProvider();
 }
 
 export function createCrmAdapter(config) {
