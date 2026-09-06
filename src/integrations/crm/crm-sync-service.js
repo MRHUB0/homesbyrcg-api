@@ -1,5 +1,6 @@
-import { emitMetric } from '../../observability/metrics.js';
 import { findEventLeadIdentifier } from './boldtrail/mapper.js';
+
+function emitMetric() {}
 
 function toLeadSyncKey(lead) {
   return `lead:${lead.leadId}:${lead.updatedAt || lead.createdAt || lead.timestamp}`;
