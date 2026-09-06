@@ -6,7 +6,41 @@ import {
 } from '@aws-sdk/client-dynamodb';
 
 import { IntegrationError } from '../../errors/index.js';
-import { fromDynamoItem, toDynamoItem, toDynamoValue } from '../lead-repository.js';
+import { fromDynamoItem, toDynamoItem } from '../lead-repository.js';
+
+function toDynamoValue(value) {
+  if (value === null || value === undefined) {
+    return { NULL: true };
+  }
+
+  if (typeof value === 'string') {
+    return { S: value };
+  }
+
+  if (typeof value === 'number') {
+    return { N: String(value) };
+  }
+
+  if (typeof value === 'boolean') {
+    return { BOOL: value };
+  }
+
+  if (Array.isArray(value)) {
+    return { L: value.map((item) => toDynamoValue(item)) };
+  }
+
+  if (typeof value === 'object') {
+    return {
+      M: Object.fromEntries(
+        Object.entries(value)
+          .filter(([, item]) => item !== undefined)
+          .map(([key, item]) => [key, toDynamoValue(item)]),
+      ),
+    };
+  }
+
+  return { S: String(value) };
+}
 
 let inMemoryCrmIdempotencyRepository;
 
