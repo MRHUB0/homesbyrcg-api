@@ -62,6 +62,12 @@ Globals:
         CORS_ALLOWED_ORIGINS: !Ref CorsAllowedOrigins
         MAX_REQUEST_BYTES: !Ref MaxRequestBytes
         LEAD_PROVIDER_MODE: !Ref LeadProviderMode
+        PROPERTY_PROVIDER_MODE: mock
+        FRANKLIN_GIS_BASE_URL: ''
+        PROPERTY_PROVIDER_TIMEOUT_MS: '2500'
+        PROPERTY_PROVIDER_MAX_ATTEMPTS: '2'
+        PROPERTY_CACHE_TTL_SECONDS: '900'
+        PROPERTY_VALUE_REQUIRE_LEAD_CONTEXT: 'true'
         LEAD_TABLE_NAME: !Ref LeadTable
         SES_SENDER: !Ref SesSender
         SES_RECIPIENT: !Ref SesRecipient
@@ -561,6 +567,110 @@ Resources:
             Path: /home-value
             Method: OPTIONS
 
+  PropertySearchFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${ServiceName}-${AppEnvironment}-property-search
+      Description: Canonical property search endpoint for Homes by RCG.
+      CodeUri: .
+      Handler: src/handlers/property-search/index.handler
+      Policies:
+        - AWSLambdaBasicExecutionRole
+      Events:
+        PropertySearch:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /property-search
+            Method: POST
+        PropertySearchOptions:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /property-search
+            Method: OPTIONS
+
+  PropertyRecordResolveFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${ServiceName}-${AppEnvironment}-property-record-resolve
+      Description: Property record resolution endpoint for Homes by RCG.
+      CodeUri: .
+      Handler: src/handlers/property-record-resolve/index.handler
+      Policies:
+        - AWSLambdaBasicExecutionRole
+      Events:
+        PropertyRecordResolve:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /property-record/resolve
+            Method: POST
+        PropertyRecordResolveOptions:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /property-record/resolve
+            Method: OPTIONS
+
+  PropertyRecordValueFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${ServiceName}-${AppEnvironment}-property-record-value
+      Description: Property record value endpoint for Homes by RCG.
+      CodeUri: .
+      Handler: src/handlers/property-record-value/index.handler
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+              Resource:
+                - !GetAtt LeadTable.Arn
+      Events:
+        PropertyRecordValue:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /property-record/value
+            Method: POST
+        PropertyRecordValueOptions:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /property-record/value
+            Method: OPTIONS
+
+  PropertyValueFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${ServiceName}-${AppEnvironment}-property-value
+      Description: Property value endpoint for Homes by RCG.
+      CodeUri: .
+      Handler: src/handlers/property-value/index.handler
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+              Resource:
+                - !GetAtt LeadTable.Arn
+      Events:
+        PropertyValue:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /property-value
+            Method: POST
+        PropertyValueOptions:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /property-value
+            Method: OPTIONS
+
 Outputs:
   ApiEndpoint:
     Description: API Gateway endpoint URL.
@@ -583,6 +693,18 @@ Outputs:
   HomeValueEndpoint:
     Description: Home value endpoint URL.
     Value: !Sub https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/${AppEnvironment}/home-value
+  PropertySearchEndpoint:
+    Description: Property search endpoint URL.
+    Value: !Sub https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/${AppEnvironment}/property-search
+  PropertyRecordResolveEndpoint:
+    Description: Property record resolve endpoint URL.
+    Value: !Sub https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/${AppEnvironment}/property-record/resolve
+  PropertyRecordValueEndpoint:
+    Description: Property record value endpoint URL.
+    Value: !Sub https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/${AppEnvironment}/property-record/value
+  PropertyValueEndpoint:
+    Description: Property value endpoint URL.
+    Value: !Sub https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/${AppEnvironment}/property-value
   OpenApiEndpoint:
     Description: OpenAPI contract endpoint URL.
     Value: !Sub https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/${AppEnvironment}/openapi.yaml
@@ -604,3 +726,15 @@ Outputs:
   HomeValueFunctionArn:
     Description: Home value Lambda function ARN.
     Value: !GetAtt HomeValueFunction.Arn
+  PropertySearchFunctionArn:
+    Description: Property search Lambda function ARN.
+    Value: !GetAtt PropertySearchFunction.Arn
+  PropertyRecordResolveFunctionArn:
+    Description: Property record resolve Lambda function ARN.
+    Value: !GetAtt PropertyRecordResolveFunction.Arn
+  PropertyRecordValueFunctionArn:
+    Description: Property record value Lambda function ARN.
+    Value: !GetAtt PropertyRecordValueFunction.Arn
+  PropertyValueFunctionArn:
+    Description: Property value Lambda function ARN.
+    Value: !GetAtt PropertyValueFunction.Arn

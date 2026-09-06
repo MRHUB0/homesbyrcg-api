@@ -26,6 +26,10 @@ GET /health
 POST /contact
 POST /consultation
 POST /home-value
+POST /property-search
+POST /property-record/resolve
+POST /property-record/value
+POST /property-value
 ```
 
 Lead submission responses return `success`, `message`, `leadId`, `status`, `requestId`,
@@ -33,9 +37,19 @@ Lead submission responses return `success`, `message`, `leadId`, `status`, `requ
 
 Lead endpoints follow one flow:
 
-```text
+````text
 API Gateway -> Lambda Handler -> Business Service -> LeadRepository -> DynamoDB LeadTable -> Provider Interface -> Response Builder
-```
+
+Property data endpoints follow:
+
+```text
+API Gateway -> Lambda Handler -> PropertyService -> PropertyProvider (mock|Franklin County GIS) -> Canonical Property Record -> Response Builder
+````
+
+`/property-record/value` and `/property-value` enforce backend journey gating by default using
+`leadId` context (`PROPERTY_VALUE_REQUIRE_LEAD_CONTEXT=true`).
+
+````
 
 Lead delivery is configuration-driven. Use `LEAD_PROVIDER_MODE=mock` for local development and
 `LEAD_PROVIDER_MODE=ses` for production email delivery through Amazon SES. Deployed environments
@@ -57,7 +71,7 @@ Start the API:
 ```bash
 LEAD_PROVIDER_MODE=mock \
 sam local start-api
-```
+````
 
 Health:
 

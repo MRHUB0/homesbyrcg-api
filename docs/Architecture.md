@@ -15,6 +15,9 @@ The foundation provides:
 - contact endpoint
 - consultation endpoint
 - home value endpoint
+- property search endpoint
+- property record resolution endpoint
+- property value endpoints
 - DynamoDB lead persistence
 - repository abstraction for lead storage
 - provider abstraction for lead delivery
@@ -54,3 +57,19 @@ API latency, and SES rejects. API Gateway and Lambda log groups retain logs for 
 
 Authentication, AI, and CRM integrations are intentionally absent. Future endpoints should compose
 the shared middleware and return the canonical response model.
+
+Property data architecture:
+
+```text
+API Gateway
+  -> Lambda Handler
+  -> PropertyService
+  -> Address Normalization
+  -> PropertyProvider (mock | franklin-county-gis)
+  -> Canonical Property Record
+  -> Response Builder
+```
+
+Property identity is canonicalized as `propertyRef` and derived from parcel identity when available,
+falling back to normalized-address identity. Provider identity is retained separately under
+`identity.providerIdentity`.
