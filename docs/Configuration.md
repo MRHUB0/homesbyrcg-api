@@ -19,6 +19,7 @@ Variables:
 - `LEAD_PROVIDER_MODE`
 - `LEAD_TABLE_NAME`
 - `ANALYTICS_EVENT_TABLE_NAME`
+- `LEAD_INTELLIGENCE_TABLE_NAME`
 - `SES_SENDER`
 - `SES_RECIPIENT`
 - `SES_REGION`
@@ -40,6 +41,10 @@ in-memory repository so tests do not require AWS credentials.
 present, analytics event handlers and lead lifecycle analytics use DynamoDB through
 `AnalyticsEventRepository`. If absent in local unit tests, the factory uses an in-memory
 repository.
+
+`LEAD_INTELLIGENCE_TABLE_NAME` is injected by SAM from the `LeadIntelligenceTable` resource. When
+present, derived lead intelligence snapshots are persisted through `LeadIntelligenceRepository`. If
+absent in local tests, an in-memory intelligence repository is used.
 
 No secrets, URLs, ARNs, tokens, or credentials should be committed. Future CRM and AI integrations
 should add explicit environment variables for endpoint URLs, secret references, retry limits, and

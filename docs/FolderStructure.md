@@ -6,6 +6,7 @@
 - `src/events` - event factories and future event contracts.
 - `src/handlers` - Lambda entrypoints.
 - `src/health` - reserved for future health-specific modules.
+- `src/lead-intelligence` - deterministic scoring, explainability, and derived intelligence persistence.
 - `src/logging` - structured JSON logger.
 - `src/middleware` - reusable HTTP middleware.
 - `src/providers` - future external provider adapters.

@@ -149,6 +149,19 @@ export const DecisionTypeValues = Object.freeze([
 export const LeadScoreBandValues = Object.freeze(['Low', 'Medium', 'High', 'Very High']);
 const blockedStructuredKeys = new Set(['__proto__', 'prototype', 'constructor']);
 
+export const EngagementLevelValues = Object.freeze(['COLD', 'WARM', 'HOT']);
+
+export const IntentClassificationValues = Object.freeze([
+  'BUYER',
+  'SELLER',
+  'SELL_AND_BUY',
+  'INVESTOR',
+  'LANDLORD',
+  'UNKNOWN',
+]);
+
+export const ConversionReadinessValues = Object.freeze(['LOW', 'MEDIUM', 'HIGH', 'READY']);
+
 function isRecord(value) {
   return (
     value === undefined || value === null || (typeof value === 'object' && !Array.isArray(value))
@@ -290,6 +303,13 @@ export function buildCanonicalLead({
     leadScore: valueOrNull(normalizedRequest.leadScore),
     leadScoreBand: valueOrNull(normalizedRequest.leadScoreBand),
     leadScoreReasons: normalizedRequest.leadScoreReasons || [],
+    engagementLevel: null,
+    primaryIntent: null,
+    secondaryIntent: null,
+    conversionReadiness: null,
+    lastScoredAt: null,
+    scoringVersion: null,
+    intelligenceSignals: [],
     campaign: valueOrNull(normalizedRequest.campaign),
     referral: valueOrNull(normalizedRequest.referral),
     notes: valueOrNull(normalizedRequest.notes),
@@ -313,6 +333,13 @@ export function buildCanonicalLead({
       leadScoreBand: valueOrNull(normalizedRequest.leadScoreBand),
       leadScoreReasons: normalizedRequest.leadScoreReasons || [],
       analyticsContext: buildAnalyticsContext(normalizedRequest),
+      engagementLevel: null,
+      primaryIntent: null,
+      secondaryIntent: null,
+      conversionReadiness: null,
+      lastScoredAt: null,
+      scoringVersion: null,
+      intelligenceSignals: [],
     },
     idempotencyKey: valueOrNull(normalizedRequest.idempotencyKey ?? context.idempotencyKey),
     provider: null,

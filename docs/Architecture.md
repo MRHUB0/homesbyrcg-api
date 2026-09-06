@@ -30,6 +30,8 @@ Lead endpoints follow the same architecture:
 API Gateway
   -> Lambda Handler
   -> Business Service
+  -> LeadIntelligenceService
+  -> LeadIntelligenceRepository (derived snapshots)
   -> LeadRepository
   -> DynamoDB LeadTable
   -> Provider Interface
@@ -38,7 +40,8 @@ API Gateway
 ```
 
 Each lead endpoint validates the request, normalizes it into the canonical lead model, logs a
-redacted copy of the normalized object, persists it through `LeadRepository`, submits the persisted
+redacted copy of the normalized object, calculates deterministic lead intelligence from canonical
+signals, persists both the canonical lead and derived intelligence snapshot, submits the persisted
 lead through a provider abstraction, records provider status back to the table, and returns a
 non-PII accepted response.
 

@@ -3,8 +3,23 @@ import { LeadService } from '../services/lead-service.js';
 import { normalizeConsultationRequest } from './consultation-validation.js';
 
 export class ConsultationService extends LeadService {
-  constructor({ provider, repository, analyticsService }) {
-    super({ provider, repository, leadType: LeadTypes.CONSULTATION, analyticsService });
+  constructor({
+    provider,
+    repository,
+    analyticsService,
+    leadIntelligenceService,
+    leadIntelligenceRepository,
+    leadIntelligenceMetrics,
+  }) {
+    super({
+      provider,
+      repository,
+      leadType: LeadTypes.CONSULTATION,
+      analyticsService,
+      leadIntelligenceService,
+      leadIntelligenceRepository,
+      leadIntelligenceMetrics,
+    });
   }
 
   normalize(payload, { context }) {

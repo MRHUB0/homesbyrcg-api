@@ -23,6 +23,7 @@ export class EnvironmentLoader {
       awsRegion: env.SES_REGION ?? env.AWS_REGION ?? env.AWS_DEFAULT_REGION,
       leadTableName: env.LEAD_TABLE_NAME,
       analyticsEventTableName: env.ANALYTICS_EVENT_TABLE_NAME,
+      leadIntelligenceTableName: env.LEAD_INTELLIGENCE_TABLE_NAME,
     };
   }
 }

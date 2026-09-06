@@ -70,6 +70,7 @@ Globals:
         PROPERTY_VALUE_REQUIRE_LEAD_CONTEXT: 'true'
         LEAD_TABLE_NAME: !Ref LeadTable
         ANALYTICS_EVENT_TABLE_NAME: !Ref AnalyticsEventTable
+        LEAD_INTELLIGENCE_TABLE_NAME: !Ref LeadIntelligenceTable
         SES_SENDER: !Ref SesSender
         SES_RECIPIENT: !Ref SesRecipient
         SES_REGION: !Ref AWS::Region
@@ -241,6 +242,22 @@ Resources:
               KeyType: RANGE
           Projection:
             ProjectionType: ALL
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+
+  LeadIntelligenceTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub ${ServiceName}-${AppEnvironment}-lead-intelligence
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: leadId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: leadId
+          KeyType: HASH
       PointInTimeRecoverySpecification:
         PointInTimeRecoveryEnabled: true
       SSESpecification:
@@ -610,6 +627,25 @@ Resources:
               Resource:
                 - !GetAtt AnalyticsEventTable.Arn
                 - !Sub ${AnalyticsEventTable.Arn}/index/*
+                - !GetAtt LeadIntelligenceTable.Arn
+                - !Sub ${LeadTable.Arn}/index/LeadIdempotencyIndex
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:Query
+              Resource:
+                - !GetAtt AnalyticsEventTable.Arn
+                - !Sub ${AnalyticsEventTable.Arn}/index/*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:UpdateItem
+              Resource:
+                - !GetAtt LeadIntelligenceTable.Arn
         - Statement:
             - Effect: Allow
               Action:
@@ -658,6 +694,25 @@ Resources:
               Resource:
                 - !GetAtt AnalyticsEventTable.Arn
                 - !Sub ${AnalyticsEventTable.Arn}/index/*
+                - !GetAtt LeadIntelligenceTable.Arn
+                - !Sub ${LeadTable.Arn}/index/LeadIdempotencyIndex
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:Query
+              Resource:
+                - !GetAtt AnalyticsEventTable.Arn
+                - !Sub ${AnalyticsEventTable.Arn}/index/*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:UpdateItem
+              Resource:
+                - !GetAtt LeadIntelligenceTable.Arn
         - Statement:
             - Effect: Allow
               Action:
@@ -706,6 +761,25 @@ Resources:
               Resource:
                 - !GetAtt AnalyticsEventTable.Arn
                 - !Sub ${AnalyticsEventTable.Arn}/index/*
+                - !GetAtt LeadIntelligenceTable.Arn
+                - !Sub ${LeadTable.Arn}/index/LeadIdempotencyIndex
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:Query
+              Resource:
+                - !GetAtt AnalyticsEventTable.Arn
+                - !Sub ${AnalyticsEventTable.Arn}/index/*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:UpdateItem
+              Resource:
+                - !GetAtt LeadIntelligenceTable.Arn
         - Statement:
             - Effect: Allow
               Action:
@@ -754,6 +828,25 @@ Resources:
               Resource:
                 - !GetAtt AnalyticsEventTable.Arn
                 - !Sub ${AnalyticsEventTable.Arn}/index/*
+                - !GetAtt LeadIntelligenceTable.Arn
+                - !Sub ${LeadTable.Arn}/index/LeadIdempotencyIndex
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:Query
+              Resource:
+                - !GetAtt AnalyticsEventTable.Arn
+                - !Sub ${AnalyticsEventTable.Arn}/index/*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:UpdateItem
+              Resource:
+                - !GetAtt LeadIntelligenceTable.Arn
         - Statement:
             - Effect: Allow
               Action:
@@ -884,6 +977,9 @@ Outputs:
   LeadTableName:
     Description: DynamoDB table used for durable lead persistence.
     Value: !Ref LeadTable
+  LeadIntelligenceTableName:
+    Description: DynamoDB table used for derived lead intelligence snapshots.
+    Value: !Ref LeadIntelligenceTable
   HealthEndpoint:
     Description: Health endpoint URL.
     Value: !Sub https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/${AppEnvironment}/health
