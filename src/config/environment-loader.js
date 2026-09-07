@@ -14,6 +14,12 @@ export class EnvironmentLoader {
         env.LEAD_PROVIDER_MODE ?? (appEnvironment === 'production' ? 'ses' : 'mock'),
       propertyProviderMode: env.PROPERTY_PROVIDER_MODE ?? 'mock',
       franklinGisBaseUrl: env.FRANKLIN_GIS_BASE_URL,
+      franklinLocatorPath:
+        env.FRANKLIN_LOCATOR_PATH ??
+        '/hosting/rest/services/Locators/GIS_LBRS_Locator/GeocodeServer',
+      franklinParcelLayerPath:
+        env.FRANKLIN_PARCEL_LAYER_PATH ??
+        '/hosting/rest/services/ParcelFeatures/Parcel_Features/MapServer/0',
       propertyProviderTimeoutMs: Number.parseInt(env.PROPERTY_PROVIDER_TIMEOUT_MS ?? '2500', 10),
       propertyProviderMaxAttempts: Number.parseInt(env.PROPERTY_PROVIDER_MAX_ATTEMPTS ?? '2', 10),
       propertyCacheTtlSeconds: Number.parseInt(env.PROPERTY_CACHE_TTL_SECONDS ?? '900', 10),

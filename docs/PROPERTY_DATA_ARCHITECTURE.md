@@ -86,24 +86,30 @@ Adapter file: `src/property-data/providers/franklin-county-provider.js`
 
 Implemented concerns:
 
-- endpoint construction via configured `FRANKLIN_GIS_BASE_URL` + ArcGIS candidate path
-- query parameter composition using normalized address
+- endpoint construction via configured `FRANKLIN_GIS_BASE_URL`
+- explicit locator path (`FRANKLIN_LOCATOR_PATH`, default:
+  `/hosting/rest/services/Locators/GIS_LBRS_Locator/GeocodeServer`)
+- explicit parcel-layer path (`FRANKLIN_PARCEL_LAYER_PATH`, default:
+  `/hosting/rest/services/ParcelFeatures/Parcel_Features/MapServer/0`)
+- two-stage lookup: `findAddressCandidates` -> parcel `query`
+- query parameter composition using normalized address (`SingleLine` input for locator)
 - bounded timeout (`PROPERTY_PROVIDER_TIMEOUT_MS`)
 - bounded retries with backoff (`PROPERTY_PROVIDER_MAX_ATTEMPTS`)
 - fail-fast treatment for provider 4xx
 - retry treatment for provider 5xx and transient failures
 - empty candidate handling (`NOT_FOUND`)
 - malformed response handling (`PROVIDER_UNAVAILABLE`)
+- ArcGIS where-clause escaping when querying parcel layer (`SITEADDRESS = '...'`)
 
 ### Verification Status
 
 - **VERIFIED FROM PROVIDER CONTRACT**: ArcGIS candidate JSON shape handling (`candidates[]`,
   `address`, `score`, `attributes`) via tests and parser contract behavior.
 - **VERIFIED LIVE**: public Franklin County root host response availability was checked.
-- **ASSUMED**: exact ArcGIS path and attribute names beyond common variants (`PARCELID`,
-  `AssessedValue`, etc.) may vary by county-hosted service.
-- **NOT VERIFIED**: county-specific production endpoint path and full field catalog for parcel
-  attributes in this repository environment.
+- **VERIFIED LIVE**: Franklin public host, locator path, parcel layer path, and key parcel fields
+  (`PARCELID`, `SITEADDRESS`, `LNDVALUEBASE`, `BLDVALUEBASE`, `TOTVALUEBASE`).
+- **ASSUMED**: all Franklin municipalities and address edge-cases are representable through the
+  current locator-to-parcel match strategy.
 
 ## Canonical Property Record
 

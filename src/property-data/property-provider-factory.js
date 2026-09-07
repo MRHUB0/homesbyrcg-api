@@ -5,6 +5,8 @@ export function createPropertyProvider(config) {
   if (config.propertyProviderMode === 'franklin') {
     return new FranklinCountyPropertyProvider({
       baseUrl: config.franklinGisBaseUrl,
+      locatorPath: config.franklinLocatorPath,
+      parcelLayerPath: config.franklinParcelLayerPath,
       timeoutMs: config.propertyProviderTimeoutMs,
       maxAttempts: config.propertyProviderMaxAttempts,
     });

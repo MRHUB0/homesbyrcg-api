@@ -75,6 +75,21 @@ Parameters:
   SesIdentity:
     Type: String
     Default: ''
+  PropertyProviderMode:
+    Type: String
+    Default: mock
+    AllowedValues:
+      - mock
+      - franklin
+  FranklinGisBaseUrl:
+    Type: String
+    Default: ''
+  FranklinLocatorPath:
+    Type: String
+    Default: /hosting/rest/services/Locators/GIS_LBRS_Locator/GeocodeServer
+  FranklinParcelLayerPath:
+    Type: String
+    Default: /hosting/rest/services/ParcelFeatures/Parcel_Features/MapServer/0
 
 Globals:
   Function:
@@ -92,8 +107,10 @@ Globals:
         CORS_ALLOWED_ORIGINS: !Ref CorsAllowedOrigins
         MAX_REQUEST_BYTES: !Ref MaxRequestBytes
         LEAD_PROVIDER_MODE: !Ref LeadProviderMode
-        PROPERTY_PROVIDER_MODE: mock
-        FRANKLIN_GIS_BASE_URL: ''
+        PROPERTY_PROVIDER_MODE: !Ref PropertyProviderMode
+        FRANKLIN_GIS_BASE_URL: !Ref FranklinGisBaseUrl
+        FRANKLIN_LOCATOR_PATH: !Ref FranklinLocatorPath
+        FRANKLIN_PARCEL_LAYER_PATH: !Ref FranklinParcelLayerPath
         PROPERTY_PROVIDER_TIMEOUT_MS: '2500'
         PROPERTY_PROVIDER_MAX_ATTEMPTS: '2'
         PROPERTY_CACHE_TTL_SECONDS: '900'

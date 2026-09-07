@@ -52,7 +52,8 @@ Do not represent assessed value as market value.
 Add/verify environment variables:
 
 - `PROPERTY_PROVIDER_MODE`
-- provider-specific base URL and optional path settings
+- provider-specific base URL and optional path settings (for Franklin:
+  `FRANKLIN_GIS_BASE_URL`, `FRANKLIN_LOCATOR_PATH`, `FRANKLIN_PARCEL_LAYER_PATH`)
 - timeout and retry settings
 - cache TTL
 
