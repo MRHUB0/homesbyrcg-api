@@ -10,10 +10,24 @@ const parcelOutFields = [
   'PARCELID',
   'SITEADDRESS',
   'ZIPCD',
+  'OWNERNME1',
+  'OWNERNME2',
+  'OWNERNME3',
   'LNDVALUEBASE',
   'BLDVALUEBASE',
   'TOTVALUEBASE',
 ].join(',');
+
+function ownerDisplayName(attributes = {}) {
+  const primary = normalizeWhitespace(attributes.OWNERNME1);
+  if (primary) return primary;
+
+  const secondary = normalizeWhitespace(attributes.OWNERNME2);
+  if (secondary) return secondary;
+
+  const tertiary = normalizeWhitespace(attributes.OWNERNME3);
+  return tertiary || null;
+}
 
 function sleep(milliseconds) {
   return new Promise((resolve) => globalThis.setTimeout(resolve, milliseconds));
@@ -134,6 +148,9 @@ function toLocatorRecord(candidate, normalizedAddress) {
     address: {
       displayAddress: candidate.address ?? normalizedAddress.displayAddress,
     },
+    owner: {
+      displayName: null,
+    },
     characteristics: {
       propertyType: null,
       yearBuilt: null,
@@ -175,6 +192,9 @@ function toParcelRecord(feature, candidate, normalizedAddress) {
     address: {
       displayAddress:
         attributes.SITEADDRESS ?? candidate?.address ?? normalizedAddress.displayAddress,
+    },
+    owner: {
+      displayName: ownerDisplayName(attributes),
     },
     characteristics: {
       propertyType: null,

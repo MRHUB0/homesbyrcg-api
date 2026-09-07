@@ -17,6 +17,9 @@ const mockRecords = [
     address: {
       displayAddress: '123 Main St, Columbus, OH 43215',
     },
+    owner: {
+      displayName: 'MAIN STREET HOLDINGS LLC',
+    },
     characteristics: {
       propertyType: 'single-family',
       yearBuilt: 1988,
@@ -53,6 +56,9 @@ const mockRecords = [
     address: {
       displayAddress: '500 Market St, Columbus, OH 43215',
     },
+    owner: {
+      displayName: 'MARKET STREET INVESTMENTS LLC',
+    },
     characteristics: {
       propertyType: 'multi-family',
       yearBuilt: 1974,
@@ -88,6 +94,9 @@ const mockRecords = [
     },
     address: {
       displayAddress: '500 Market St Unit 2, Columbus, OH 43215',
+    },
+    owner: {
+      displayName: 'MARKET STREET INVESTMENTS LLC',
     },
     characteristics: {
       propertyType: 'condo',

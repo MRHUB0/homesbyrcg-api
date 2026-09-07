@@ -53,6 +53,8 @@ test('POST /property-search returns FOUND for a valid address', async () => {
   assert.equal(body.success, true);
   assert.equal(body.data.status, 'FOUND');
   assert.ok(body.data.propertyRef.startsWith('hbrcg_prop_'));
+  assert.equal(body.data.propertyRecord.owner.displayName, 'MAIN STREET HOLDINGS LLC');
+  assert.equal(body.data.matches[0].ownerDisplayName, 'MAIN STREET HOLDINGS LLC');
 });
 
 test('POST /property-record/resolve returns MULTIPLE_MATCHES for ambiguous address', async () => {
@@ -73,6 +75,7 @@ test('POST /property-record/resolve returns MULTIPLE_MATCHES for ambiguous addre
   assert.equal(response.statusCode, 200);
   assert.equal(body.data.status, 'MULTIPLE_MATCHES');
   assert.equal(body.data.matches.length, 2);
+  assert.equal(body.data.matches[0].ownerDisplayName, 'MARKET STREET INVESTMENTS LLC');
 });
 
 test('POST /property-record/resolve returns NOT_FOUND for no matches', async () => {

@@ -59,7 +59,8 @@ Resolves address input to canonical property identities and returns summary matc
 ### POST /property-record/resolve
 
 Returns canonical property records (identity, normalized/display address, parcel, jurisdiction,
-characteristics, assessment, valuation placeholders, provenance, timestamps).
+public-record owner display name when available, characteristics, assessment, valuation
+placeholders, provenance, timestamps).
 
 ### POST /property-record/value and POST /property-value
 

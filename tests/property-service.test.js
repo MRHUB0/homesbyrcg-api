@@ -55,6 +55,7 @@ test('property service resolves a canonical propertyRef for a unique match', asy
   assert.ok(result.propertyRef.startsWith('hbrcg_prop_'));
   assert.equal(result.matches.length, 1);
   assert.equal(result.propertyRecord.identity.propertyRef, result.propertyRef);
+  assert.equal(result.propertyRecord.owner.displayName, 'MAIN STREET HOLDINGS LLC');
   assert.equal(result.propertyRecord.assessment.sourceType, 'ASSESSMENT');
   assert.equal(result.propertyRecord.valuations.providerEstimate, null);
 });
@@ -75,6 +76,7 @@ test('property service returns multiple match status for ambiguous addresses', a
 
   assert.equal(result.status, PropertyResolutionStatus.MULTIPLE_MATCHES);
   assert.equal(result.matches.length, 2);
+  assert.equal(result.matches[0].ownerDisplayName, 'MARKET STREET INVESTMENTS LLC');
   assert.equal(result.candidateRecords.length, 2);
 });
 

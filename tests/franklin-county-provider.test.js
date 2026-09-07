@@ -62,6 +62,7 @@ test('franklin provider uses locator and parcel endpoints', async () => {
               OBJECTID: 10,
               PARCELID: '010-055568',
               SITEADDRESS: '373 S HIGH ST',
+              OWNERNME1: 'PUBLIC OWNER NAME',
               LNDVALUEBASE: 100000,
               BLDVALUEBASE: 225000,
               TOTVALUEBASE: 325000,
@@ -77,6 +78,7 @@ test('franklin provider uses locator and parcel endpoints', async () => {
   assert.equal(result.status, PropertyResolutionStatus.FOUND);
   assert.equal(result.matches.length, 1);
   assert.equal(result.matches[0].parcel.parcelId, '010-055568');
+  assert.equal(result.matches[0].owner.displayName, 'PUBLIC OWNER NAME');
   assert.equal(result.matches[0].assessment.assessedValue, 325000);
   assert.ok(
     calls.some((call) =>
@@ -90,6 +92,48 @@ test('franklin provider uses locator and parcel endpoints', async () => {
       call.includes('/hosting/rest/services/ParcelFeatures/Parcel_Features/MapServer/0/query'),
     ),
   );
+  assert.ok(
+    calls.some(
+      (call) =>
+        call.includes('outFields=') &&
+        call.includes('OWNERNME1') &&
+        call.includes('OWNERNME2') &&
+        call.includes('OWNERNME3'),
+    ),
+  );
+});
+
+test('franklin provider falls back through owner name fields', async () => {
+  const provider = new FranklinCountyPropertyProvider({
+    baseUrl: 'https://gis.franklincountyohio.gov',
+    fetchImpl: async (url) => {
+      if (url.includes('/findAddressCandidates')) {
+        return response(200, {
+          candidates: [{ address: '373 S HIGH ST', score: 92, attributes: { Name: '373 S HIGH ST' } }],
+        });
+      }
+
+      return response(200, {
+        features: [
+          {
+            attributes: {
+              OBJECTID: 11,
+              PARCELID: '010-055569',
+              SITEADDRESS: '373 S HIGH ST',
+              OWNERNME1: '',
+              OWNERNME2: 'SECONDARY OWNER NAME',
+              OWNERNME3: null,
+            },
+          },
+        ],
+      });
+    },
+  });
+
+  const result = await provider.resolveProperty({ normalizedAddress: normalizedAddress() });
+
+  assert.equal(result.status, PropertyResolutionStatus.FOUND);
+  assert.equal(result.matches[0].owner.displayName, 'SECONDARY OWNER NAME');
 });
 
 test('franklin provider retries transient 5xx and then succeeds', async () => {

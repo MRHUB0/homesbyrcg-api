@@ -100,6 +100,7 @@ export class PropertyService {
           propertyRef: record.identity.propertyRef,
           displayAddress: record.address.displayAddress,
           parcelId: record.parcel.parcelId,
+          ownerDisplayName: record.owner?.displayName ?? null,
         })),
         candidateRecords: records,
       };
@@ -117,6 +118,7 @@ export class PropertyService {
           propertyRef: records[0].identity.propertyRef,
           displayAddress: records[0].address.displayAddress,
           parcelId: records[0].parcel.parcelId,
+          ownerDisplayName: records[0].owner?.displayName ?? null,
         },
       ],
       propertyRecord: records[0],

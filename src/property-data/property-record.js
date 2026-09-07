@@ -46,6 +46,9 @@ export function toCanonicalPropertyRecord({
         postalCode: valueOrNull(normalizedAddress.postalCode),
       },
     },
+    owner: {
+      displayName: valueOrNull(providerRecord.owner?.displayName),
+    },
     parcel,
     jurisdiction,
     characteristics: {
