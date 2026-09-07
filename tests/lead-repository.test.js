@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { ConflictError } from '../src/errors/index.js';
+import { normalizeGenericLeadRequest } from '../src/leads/generic-lead-validation.js';
+import { buildCanonicalLead, LeadTypes } from '../src/leads/lead-model.js';
 import {
   InMemoryLeadRepository,
   LeadRepository,
@@ -138,4 +140,66 @@ test('lead repository sends DynamoDB commands for create, get, update, and email
 
 test('DynamoDB marshalling preserves nested lead data', () => {
   assert.deepEqual(fromDynamoItem(toDynamoItem(lead)), lead);
+});
+
+test('canonical browser lead omits idempotencyKey when not provided to avoid repository integration failures', async () => {
+  const normalizedRequest = normalizeGenericLeadRequest(
+    {
+      firstName: 'Casey',
+      email: 'casey@example.com',
+      phone: '+1 555 123 4567',
+      journeySource: 'seller',
+      currentPage: '/rental-check/',
+      leadIntent: 'Request professional guidance',
+      conversionType: 'contact',
+      conversionEvent: 'contact_requested',
+      journeyStage: 'ready',
+      decisionType: 'seller',
+      visitorId: 'visitor-1',
+      sessionId: 'session-1',
+      journeyId: 'journey-1',
+      funnel: 'rental-check',
+      landingPage: '/rental-check/',
+      attribution: {},
+      consent: {
+        contact: {
+          agreed: true,
+          textVersion: 'contact-v1',
+          agreedAt: '2026-09-07T00:00:00.000Z',
+        },
+      },
+      property: {
+        propertyRef: 'hbrcg_prop_123',
+      },
+    },
+  );
+
+  const canonicalLead = buildCanonicalLead({
+    leadType: LeadTypes.GENERIC,
+    normalizedRequest,
+    context: {
+      requestId: 'request-123',
+      correlationId: 'correlation-123',
+    },
+  });
+
+  const client = {
+    async send(command) {
+      const input = command?.input || {};
+      if (input.Item?.idempotencyKey?.NULL === true) {
+        const error = new Error(
+          'Type mismatch for Index Key idempotencyKey Expected: S Actual: NULL',
+        );
+        error.name = 'ValidationException';
+        throw error;
+      }
+      return {};
+    },
+  };
+
+  const repository = new LeadRepository({ tableName: 'LeadTable', client });
+  await repository.createLead(canonicalLead);
+
+  const dynamoItem = toDynamoItem(canonicalLead);
+  assert.equal('idempotencyKey' in dynamoItem, false);
 });

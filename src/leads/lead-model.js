@@ -341,7 +341,7 @@ export function buildCanonicalLead({
       scoringVersion: null,
       intelligenceSignals: [],
     },
-    idempotencyKey: valueOrNull(normalizedRequest.idempotencyKey ?? context.idempotencyKey),
+    idempotencyKey: normalizeString(normalizedRequest.idempotencyKey ?? context.idempotencyKey),
     provider: null,
     providerStatus: null,
     createdAt,
