@@ -143,36 +143,34 @@ test('DynamoDB marshalling preserves nested lead data', () => {
 });
 
 test('canonical browser lead omits idempotencyKey when not provided to avoid repository integration failures', async () => {
-  const normalizedRequest = normalizeGenericLeadRequest(
-    {
-      firstName: 'Casey',
-      email: 'casey@example.com',
-      phone: '+1 555 123 4567',
-      journeySource: 'seller',
-      currentPage: '/rental-check/',
-      leadIntent: 'Request professional guidance',
-      conversionType: 'contact',
-      conversionEvent: 'contact_requested',
-      journeyStage: 'ready',
-      decisionType: 'seller',
-      visitorId: 'visitor-1',
-      sessionId: 'session-1',
-      journeyId: 'journey-1',
-      funnel: 'rental-check',
-      landingPage: '/rental-check/',
-      attribution: {},
-      consent: {
-        contact: {
-          agreed: true,
-          textVersion: 'contact-v1',
-          agreedAt: '2026-09-07T00:00:00.000Z',
-        },
-      },
-      property: {
-        propertyRef: 'hbrcg_prop_123',
+  const normalizedRequest = normalizeGenericLeadRequest({
+    firstName: 'Casey',
+    email: 'casey@example.com',
+    phone: '+1 555 123 4567',
+    journeySource: 'seller',
+    currentPage: '/rental-check/',
+    leadIntent: 'Request professional guidance',
+    conversionType: 'contact',
+    conversionEvent: 'contact_requested',
+    journeyStage: 'ready',
+    decisionType: 'seller',
+    visitorId: 'visitor-1',
+    sessionId: 'session-1',
+    journeyId: 'journey-1',
+    funnel: 'rental-check',
+    landingPage: '/rental-check/',
+    attribution: {},
+    consent: {
+      contact: {
+        agreed: true,
+        textVersion: 'contact-v1',
+        agreedAt: '2026-09-07T00:00:00.000Z',
       },
     },
-  );
+    property: {
+      propertyRef: 'hbrcg_prop_123',
+    },
+  });
 
   const canonicalLead = buildCanonicalLead({
     leadType: LeadTypes.GENERIC,
@@ -200,6 +198,70 @@ test('canonical browser lead omits idempotencyKey when not provided to avoid rep
   const repository = new LeadRepository({ tableName: 'LeadTable', client });
   await repository.createLead(canonicalLead);
 
+  assert.equal(Object.prototype.hasOwnProperty.call(canonicalLead, 'idempotencyKey'), false);
+
   const dynamoItem = toDynamoItem(canonicalLead);
-  assert.equal('idempotencyKey' in dynamoItem, false);
+  assert.equal(Object.prototype.hasOwnProperty.call(dynamoItem, 'idempotencyKey'), false);
+});
+
+test('canonical browser lead preserves supplied idempotencyKey and stores it as DynamoDB string', async () => {
+  const normalizedRequest = normalizeGenericLeadRequest({
+    firstName: 'Casey',
+    email: 'casey@example.com',
+    phone: '+1 555 123 4567',
+    journeySource: 'seller',
+    currentPage: '/rental-check/',
+    leadIntent: 'Request professional guidance',
+    conversionType: 'contact',
+    conversionEvent: 'contact_requested',
+    journeyStage: 'ready',
+    decisionType: 'seller',
+    visitorId: 'visitor-1',
+    sessionId: 'session-1',
+    journeyId: 'journey-1',
+    funnel: 'rental-check',
+    landingPage: '/rental-check/',
+    idempotencyKey: '  idem-abc-123  ',
+    attribution: {},
+    consent: {
+      contact: {
+        agreed: true,
+        textVersion: 'contact-v1',
+        agreedAt: '2026-09-07T00:00:00.000Z',
+      },
+    },
+    property: {
+      propertyRef: 'hbrcg_prop_123',
+    },
+  });
+
+  const canonicalLead = buildCanonicalLead({
+    leadType: LeadTypes.GENERIC,
+    normalizedRequest,
+    context: {
+      requestId: 'request-123',
+      correlationId: 'correlation-123',
+      idempotencyKey: null,
+    },
+  });
+
+  assert.equal(Object.prototype.hasOwnProperty.call(canonicalLead, 'idempotencyKey'), true);
+  assert.equal(canonicalLead.idempotencyKey, 'idem-abc-123');
+
+  const sentItems = [];
+  const client = {
+    async send(command) {
+      const input = command?.input || {};
+      if (input?.Item) sentItems.push(input.Item);
+      return {};
+    },
+  };
+
+  const repository = new LeadRepository({ tableName: 'LeadTable', client });
+  await repository.createLead(canonicalLead);
+
+  const dynamoItem = toDynamoItem(canonicalLead);
+  assert.equal(Object.prototype.hasOwnProperty.call(dynamoItem, 'idempotencyKey'), true);
+  assert.deepEqual(dynamoItem.idempotencyKey, { S: 'idem-abc-123' });
+  assert.deepEqual(sentItems[0]?.idempotencyKey, { S: 'idem-abc-123' });
 });

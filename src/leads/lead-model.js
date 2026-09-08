@@ -284,8 +284,11 @@ export function buildCanonicalLead({
   timestamp = nowIso(),
 }) {
   const createdAt = timestamp;
+  const idempotencyKey = normalizeString(
+    normalizedRequest.idempotencyKey ?? context.idempotencyKey,
+  );
 
-  return {
+  const canonicalLead = {
     leadId,
     leadType,
     timestamp,
@@ -341,12 +344,17 @@ export function buildCanonicalLead({
       scoringVersion: null,
       intelligenceSignals: [],
     },
-    idempotencyKey: normalizeString(normalizedRequest.idempotencyKey ?? context.idempotencyKey),
     provider: null,
     providerStatus: null,
     createdAt,
     updatedAt: createdAt,
   };
+
+  if (typeof idempotencyKey === 'string' && idempotencyKey.length > 0) {
+    canonicalLead.idempotencyKey = idempotencyKey;
+  }
+
+  return canonicalLead;
 }
 
 export function normalizeString(value) {
