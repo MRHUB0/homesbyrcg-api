@@ -34,6 +34,36 @@ Parameters:
     AllowedValues:
       - mock
       - ses
+  CrmProviderMode:
+    Type: String
+    Default: disabled
+    AllowedValues:
+      - disabled
+      - mock
+      - boldtrail
+  CrmSyncTimeoutMs:
+    Type: Number
+    Default: 6000
+  CrmSyncMaxRetries:
+    Type: Number
+    Default: 3
+  CrmSyncBaseDelayMs:
+    Type: Number
+    Default: 150
+  CrmSyncMaxDelayMs:
+    Type: Number
+    Default: 2000
+  BoldTrailApiBaseUrl:
+    Type: String
+    Default: https://api.kvcore.com
+  BoldTrailApiToken:
+    Type: String
+    Default: ''
+    NoEcho: true
+  PropertyRefSigningSecret:
+    Type: String
+    Default: ''
+    NoEcho: true
   SesSender:
     Type: String
     Default: ''
@@ -45,6 +75,21 @@ Parameters:
   SesIdentity:
     Type: String
     Default: ''
+  PropertyProviderMode:
+    Type: String
+    Default: mock
+    AllowedValues:
+      - mock
+      - franklin
+  FranklinGisBaseUrl:
+    Type: String
+    Default: ''
+  FranklinLocatorPath:
+    Type: String
+    Default: /hosting/rest/services/Locators/GIS_LBRS_Locator/GeocodeServer
+  FranklinParcelLayerPath:
+    Type: String
+    Default: /hosting/rest/services/ParcelFeatures/Parcel_Features/MapServer/0
 
 Globals:
   Function:
@@ -62,7 +107,27 @@ Globals:
         CORS_ALLOWED_ORIGINS: !Ref CorsAllowedOrigins
         MAX_REQUEST_BYTES: !Ref MaxRequestBytes
         LEAD_PROVIDER_MODE: !Ref LeadProviderMode
+        PROPERTY_PROVIDER_MODE: !Ref PropertyProviderMode
+        FRANKLIN_GIS_BASE_URL: !Ref FranklinGisBaseUrl
+        FRANKLIN_LOCATOR_PATH: !Ref FranklinLocatorPath
+        FRANKLIN_PARCEL_LAYER_PATH: !Ref FranklinParcelLayerPath
+        PROPERTY_PROVIDER_TIMEOUT_MS: '2500'
+        PROPERTY_PROVIDER_MAX_ATTEMPTS: '2'
+        PROPERTY_CACHE_TTL_SECONDS: '900'
+        PROPERTY_VALUE_REQUIRE_LEAD_CONTEXT: 'true'
         LEAD_TABLE_NAME: !Ref LeadTable
+        ANALYTICS_EVENT_TABLE_NAME: !Ref AnalyticsEventTable
+        LEAD_INTELLIGENCE_TABLE_NAME: !Ref LeadIntelligenceTable
+        CRM_PROVIDER_MODE: !Ref CrmProviderMode
+        CRM_SYNC_TIMEOUT_MS: !Ref CrmSyncTimeoutMs
+        CRM_SYNC_MAX_RETRIES: !Ref CrmSyncMaxRetries
+        CRM_SYNC_BASE_DELAY_MS: !Ref CrmSyncBaseDelayMs
+        CRM_SYNC_MAX_DELAY_MS: !Ref CrmSyncMaxDelayMs
+        BOLDTRAIL_API_BASE_URL: !Ref BoldTrailApiBaseUrl
+        BOLDTRAIL_API_TOKEN: !Ref BoldTrailApiToken
+        PROPERTY_REF_SIGNING_SECRET: !Ref PropertyRefSigningSecret
+        EVENT_TABLE_NAME: !Ref AnalyticsEventTable
+        CRM_IDEMPOTENCY_TABLE_NAME: !Ref CrmIdempotencyTable
         SES_SENDER: !Ref SesSender
         SES_RECIPIENT: !Ref SesRecipient
         SES_REGION: !Ref AWS::Region
@@ -82,6 +147,10 @@ Resources:
     Type: AWS::Serverless::HttpApi
     Properties:
       StageName: !Ref AppEnvironment
+      RouteSettings:
+        'POST /leads':
+          ThrottlingBurstLimit: 20
+          ThrottlingRateLimit: 10
       CorsConfiguration:
         AllowOrigins: !Split [',', !Ref CorsAllowedOrigins]
         AllowMethods:
@@ -107,6 +176,8 @@ Resources:
 
   LeadTable:
     Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       TableName: !Sub ${ServiceName}-${AppEnvironment}-leads
       BillingMode: PAY_PER_REQUEST
@@ -114,6 +185,8 @@ Resources:
         - AttributeName: leadId
           AttributeType: S
         - AttributeName: email
+          AttributeType: S
+        - AttributeName: idempotencyKey
           AttributeType: S
       KeySchema:
         - AttributeName: leadId
@@ -125,6 +198,202 @@ Resources:
               KeyType: HASH
           Projection:
             ProjectionType: ALL
+        - IndexName: LeadIdempotencyIndex
+          KeySchema:
+            - AttributeName: idempotencyKey
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+
+  AnalyticsEventTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub ${ServiceName}-${AppEnvironment}-analytics-events
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: eventId
+          AttributeType: S
+        - AttributeName: visitorId
+          AttributeType: S
+        - AttributeName: sessionId
+          AttributeType: S
+        - AttributeName: journeyId
+          AttributeType: S
+        - AttributeName: leadId
+          AttributeType: S
+        - AttributeName: funnel
+          AttributeType: S
+        - AttributeName: attributionCampaign
+          AttributeType: S
+        - AttributeName: landingPage
+          AttributeType: S
+        - AttributeName: propertyRef
+          AttributeType: S
+        - AttributeName: occurredAt
+          AttributeType: S
+      KeySchema:
+        - AttributeName: eventId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: VisitorOccurredAtIndex
+          KeySchema:
+            - AttributeName: visitorId
+              KeyType: HASH
+            - AttributeName: occurredAt
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+        - IndexName: SessionOccurredAtIndex
+          KeySchema:
+            - AttributeName: sessionId
+              KeyType: HASH
+            - AttributeName: occurredAt
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+        - IndexName: JourneyOccurredAtIndex
+          KeySchema:
+            - AttributeName: journeyId
+              KeyType: HASH
+            - AttributeName: occurredAt
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+        - IndexName: LeadOccurredAtIndex
+          KeySchema:
+            - AttributeName: leadId
+              KeyType: HASH
+            - AttributeName: occurredAt
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+        - IndexName: FunnelOccurredAtIndex
+          KeySchema:
+            - AttributeName: funnel
+              KeyType: HASH
+            - AttributeName: occurredAt
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+        - IndexName: CampaignOccurredAtIndex
+          KeySchema:
+            - AttributeName: attributionCampaign
+              KeyType: HASH
+            - AttributeName: occurredAt
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+        - IndexName: LandingOccurredAtIndex
+          KeySchema:
+            - AttributeName: landingPage
+              KeyType: HASH
+            - AttributeName: occurredAt
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+        - IndexName: PropertyOccurredAtIndex
+          KeySchema:
+            - AttributeName: propertyRef
+              KeyType: HASH
+            - AttributeName: occurredAt
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+
+  EventTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      TableName: !Sub ${ServiceName}-${AppEnvironment}-events
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: pk
+          AttributeType: S
+        - AttributeName: sk
+          AttributeType: S
+        - AttributeName: gsiEventPk
+          AttributeType: S
+        - AttributeName: gsiEventSk
+          AttributeType: S
+        - AttributeName: gsiFunnelPk
+          AttributeType: S
+        - AttributeName: gsiFunnelSk
+          AttributeType: S
+        - AttributeName: gsiCampaignPk
+          AttributeType: S
+        - AttributeName: gsiCampaignSk
+          AttributeType: S
+      KeySchema:
+        - AttributeName: pk
+          KeyType: HASH
+        - AttributeName: sk
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: EventNameTimeIndex
+          KeySchema:
+            - AttributeName: gsiEventPk
+              KeyType: HASH
+            - AttributeName: gsiEventSk
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+        - IndexName: FunnelTimeIndex
+          KeySchema:
+            - AttributeName: gsiFunnelPk
+              KeyType: HASH
+            - AttributeName: gsiFunnelSk
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+        - IndexName: CampaignTimeIndex
+          KeySchema:
+            - AttributeName: gsiCampaignPk
+              KeyType: HASH
+            - AttributeName: gsiCampaignSk
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+
+  LeadIntelligenceTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub ${ServiceName}-${AppEnvironment}-lead-intelligence
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: leadId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: leadId
+          KeyType: HASH
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+
+  CrmIdempotencyTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub ${ServiceName}-${AppEnvironment}-crm-idempotency
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: key
+          AttributeType: S
+      KeySchema:
+        - AttributeName: key
+          KeyType: HASH
       PointInTimeRecoverySpecification:
         PointInTimeRecoveryEnabled: true
       SSESpecification:
@@ -164,6 +433,38 @@ Resources:
             Path: /openapi.yaml
             Method: GET
 
+  EventsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${ServiceName}-${AppEnvironment}-events
+      Description: Canonical analytics event intake endpoint for Homes by RCG.
+      CodeUri: .
+      Handler: src/handlers/events/index.handler
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:Query
+              Resource:
+                - !GetAtt AnalyticsEventTable.Arn
+                - !Sub ${AnalyticsEventTable.Arn}/index/*
+      Events:
+        Events:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /events
+            Method: POST
+        EventsOptions:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /events
+            Method: OPTIONS
+
   LambdaErrorsAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
@@ -195,6 +496,19 @@ Resources:
                   Namespace: AWS/Lambda,
                   MetricName: Errors,
                   Dimensions: [{ Name: FunctionName, Value: !Ref OpenApiFunction }],
+                },
+              Period: 300,
+              Stat: Sum,
+            }
+          ReturnData: false
+        - Id: events
+          MetricStat:
+            {
+              Metric:
+                {
+                  Namespace: AWS/Lambda,
+                  MetricName: Errors,
+                  Dimensions: [{ Name: FunctionName, Value: !Ref EventsFunction }],
                 },
               Period: 300,
               Stat: Sum,
@@ -294,6 +608,19 @@ Resources:
               Stat: Sum,
             }
           ReturnData: false
+        - Id: events
+          MetricStat:
+            {
+              Metric:
+                {
+                  Namespace: AWS/Lambda,
+                  MetricName: Throttles,
+                  Dimensions: [{ Name: FunctionName, Value: !Ref EventsFunction }],
+                },
+              Period: 300,
+              Stat: Sum,
+            }
+          ReturnData: false
         - Id: contact
           MetricStat:
             {
@@ -350,6 +677,90 @@ Resources:
       DatapointsToAlarm: 1
       Threshold: 1
       ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+
+  PropertySearchFailureRateAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${ServiceName}-${AppEnvironment}-property-search-failure-rate
+      AlarmDescription: Property search failure rate is above threshold.
+      Metrics:
+        - Id: failureRate
+          Expression: IF(requests > 0, (failures / requests) * 100, 0)
+          Label: Property search failure rate percent
+          ReturnData: true
+        - Id: requests
+          MetricStat:
+            {
+              Metric:
+                {
+                  Namespace: AWS/Lambda,
+                  MetricName: Invocations,
+                  Dimensions: [{ Name: FunctionName, Value: !Ref PropertySearchFunction }],
+                },
+              Period: 300,
+              Stat: Sum,
+            }
+          ReturnData: false
+        - Id: failures
+          MetricStat:
+            {
+              Metric:
+                {
+                  Namespace: AWS/Lambda,
+                  MetricName: Errors,
+                  Dimensions: [{ Name: FunctionName, Value: !Ref PropertySearchFunction }],
+                },
+              Period: 300,
+              Stat: Sum,
+            }
+          ReturnData: false
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: 5
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+
+  PropertyValueFailureRateAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${ServiceName}-${AppEnvironment}-property-value-failure-rate
+      AlarmDescription: Property value failure rate is above threshold.
+      Metrics:
+        - Id: failureRate
+          Expression: IF(requests > 0, (failures / requests) * 100, 0)
+          Label: Property value failure rate percent
+          ReturnData: true
+        - Id: requests
+          MetricStat:
+            {
+              Metric:
+                {
+                  Namespace: AWS/Lambda,
+                  MetricName: Invocations,
+                  Dimensions: [{ Name: FunctionName, Value: !Ref PropertyValueFunction }],
+                },
+              Period: 300,
+              Stat: Sum,
+            }
+          ReturnData: false
+        - Id: failures
+          MetricStat:
+            {
+              Metric:
+                {
+                  Namespace: AWS/Lambda,
+                  MetricName: Errors,
+                  Dimensions: [{ Name: FunctionName, Value: !Ref PropertyValueFunction }],
+                },
+              Period: 300,
+              Stat: Sum,
+            }
+          ReturnData: false
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: 5
+      ComparisonOperator: GreaterThanThreshold
       TreatMissingData: notBreaching
 
   Api5xxAlarm:
@@ -426,11 +837,36 @@ Resources:
               Resource:
                 - !GetAtt LeadTable.Arn
                 - !Sub ${LeadTable.Arn}/index/LeadEmailIndex
+                - !Sub ${LeadTable.Arn}/index/LeadIdempotencyIndex
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:Query
+              Resource:
+                - !GetAtt AnalyticsEventTable.Arn
+                - !Sub ${AnalyticsEventTable.Arn}/index/*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:UpdateItem
+              Resource:
+                - !GetAtt LeadIntelligenceTable.Arn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:PutItem
+                - dynamodb:UpdateItem
+                - dynamodb:DeleteItem
+              Resource:
+                - !GetAtt CrmIdempotencyTable.Arn
         - Statement:
             - Effect: Allow
               Action:
                 - ses:SendEmail
-                - ses:SendRawEmail
               Resource: !Sub arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/${SesIdentity}
       Events:
         Contact:
@@ -465,11 +901,36 @@ Resources:
               Resource:
                 - !GetAtt LeadTable.Arn
                 - !Sub ${LeadTable.Arn}/index/LeadEmailIndex
+                - !Sub ${LeadTable.Arn}/index/LeadIdempotencyIndex
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:Query
+              Resource:
+                - !GetAtt AnalyticsEventTable.Arn
+                - !Sub ${AnalyticsEventTable.Arn}/index/*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:UpdateItem
+              Resource:
+                - !GetAtt LeadIntelligenceTable.Arn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:PutItem
+                - dynamodb:UpdateItem
+                - dynamodb:DeleteItem
+              Resource:
+                - !GetAtt CrmIdempotencyTable.Arn
         - Statement:
             - Effect: Allow
               Action:
                 - ses:SendEmail
-                - ses:SendRawEmail
               Resource: !Sub arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/${SesIdentity}
       Events:
         Leads:
@@ -504,11 +965,36 @@ Resources:
               Resource:
                 - !GetAtt LeadTable.Arn
                 - !Sub ${LeadTable.Arn}/index/LeadEmailIndex
+                - !Sub ${LeadTable.Arn}/index/LeadIdempotencyIndex
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:Query
+              Resource:
+                - !GetAtt AnalyticsEventTable.Arn
+                - !Sub ${AnalyticsEventTable.Arn}/index/*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:UpdateItem
+              Resource:
+                - !GetAtt LeadIntelligenceTable.Arn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:PutItem
+                - dynamodb:UpdateItem
+                - dynamodb:DeleteItem
+              Resource:
+                - !GetAtt CrmIdempotencyTable.Arn
         - Statement:
             - Effect: Allow
               Action:
                 - ses:SendEmail
-                - ses:SendRawEmail
               Resource: !Sub arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/${SesIdentity}
       Events:
         Consultation:
@@ -543,11 +1029,36 @@ Resources:
               Resource:
                 - !GetAtt LeadTable.Arn
                 - !Sub ${LeadTable.Arn}/index/LeadEmailIndex
+                - !Sub ${LeadTable.Arn}/index/LeadIdempotencyIndex
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:Query
+              Resource:
+                - !GetAtt AnalyticsEventTable.Arn
+                - !Sub ${AnalyticsEventTable.Arn}/index/*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:UpdateItem
+              Resource:
+                - !GetAtt LeadIntelligenceTable.Arn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:PutItem
+                - dynamodb:UpdateItem
+                - dynamodb:DeleteItem
+              Resource:
+                - !GetAtt CrmIdempotencyTable.Arn
         - Statement:
             - Effect: Allow
               Action:
                 - ses:SendEmail
-                - ses:SendRawEmail
               Resource: !Sub arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/${SesIdentity}
       Events:
         HomeValue:
@@ -563,6 +1074,110 @@ Resources:
             Path: /home-value
             Method: OPTIONS
 
+  PropertySearchFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${ServiceName}-${AppEnvironment}-property-search
+      Description: Canonical property search endpoint for Homes by RCG.
+      CodeUri: .
+      Handler: src/handlers/property-search/index.handler
+      Policies:
+        - AWSLambdaBasicExecutionRole
+      Events:
+        PropertySearch:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /property-search
+            Method: POST
+        PropertySearchOptions:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /property-search
+            Method: OPTIONS
+
+  PropertyRecordResolveFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${ServiceName}-${AppEnvironment}-property-record-resolve
+      Description: Property record resolution endpoint for Homes by RCG.
+      CodeUri: .
+      Handler: src/handlers/property-record-resolve/index.handler
+      Policies:
+        - AWSLambdaBasicExecutionRole
+      Events:
+        PropertyRecordResolve:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /property-record/resolve
+            Method: POST
+        PropertyRecordResolveOptions:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /property-record/resolve
+            Method: OPTIONS
+
+  PropertyRecordValueFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${ServiceName}-${AppEnvironment}-property-record-value
+      Description: Property record value endpoint for Homes by RCG.
+      CodeUri: .
+      Handler: src/handlers/property-record-value/index.handler
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+              Resource:
+                - !GetAtt LeadTable.Arn
+      Events:
+        PropertyRecordValue:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /property-record/value
+            Method: POST
+        PropertyRecordValueOptions:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /property-record/value
+            Method: OPTIONS
+
+  PropertyValueFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${ServiceName}-${AppEnvironment}-property-value
+      Description: Property value endpoint for Homes by RCG.
+      CodeUri: .
+      Handler: src/handlers/property-value/index.handler
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+              Resource:
+                - !GetAtt LeadTable.Arn
+      Events:
+        PropertyValue:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /property-value
+            Method: POST
+        PropertyValueOptions:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /property-value
+            Method: OPTIONS
+
 Outputs:
   ApiEndpoint:
     Description: API Gateway endpoint URL.
@@ -570,6 +1185,9 @@ Outputs:
   LeadTableName:
     Description: DynamoDB table used for durable lead persistence.
     Value: !Ref LeadTable
+  LeadIntelligenceTableName:
+    Description: DynamoDB table used for derived lead intelligence snapshots.
+    Value: !Ref LeadIntelligenceTable
   HealthEndpoint:
     Description: Health endpoint URL.
     Value: !Sub https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/${AppEnvironment}/health
@@ -585,6 +1203,24 @@ Outputs:
   HomeValueEndpoint:
     Description: Home value endpoint URL.
     Value: !Sub https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/${AppEnvironment}/home-value
+  PropertySearchEndpoint:
+    Description: Property search endpoint URL.
+    Value: !Sub https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/${AppEnvironment}/property-search
+  PropertyRecordResolveEndpoint:
+    Description: Property record resolve endpoint URL.
+    Value: !Sub https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/${AppEnvironment}/property-record/resolve
+  PropertyRecordValueEndpoint:
+    Description: Property record value endpoint URL.
+    Value: !Sub https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/${AppEnvironment}/property-record/value
+  PropertyValueEndpoint:
+    Description: Property value endpoint URL.
+    Value: !Sub https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/${AppEnvironment}/property-value
+  EventsEndpoint:
+    Description: Analytics events endpoint URL.
+    Value: !Sub https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/${AppEnvironment}/events
+  AnalyticsEventTableName:
+    Description: DynamoDB table used for canonical analytics event persistence.
+    Value: !Ref AnalyticsEventTable
   OpenApiEndpoint:
     Description: OpenAPI contract endpoint URL.
     Value: !Sub https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/${AppEnvironment}/openapi.yaml
@@ -594,6 +1230,9 @@ Outputs:
   OpenApiFunctionArn:
     Description: OpenAPI Lambda function ARN.
     Value: !GetAtt OpenApiFunction.Arn
+  EventsFunctionArn:
+    Description: Analytics events Lambda function ARN.
+    Value: !GetAtt EventsFunction.Arn
   ContactFunctionArn:
     Description: Contact Lambda function ARN.
     Value: !GetAtt ContactFunction.Arn
@@ -606,3 +1245,15 @@ Outputs:
   HomeValueFunctionArn:
     Description: Home value Lambda function ARN.
     Value: !GetAtt HomeValueFunction.Arn
+  PropertySearchFunctionArn:
+    Description: Property search Lambda function ARN.
+    Value: !GetAtt PropertySearchFunction.Arn
+  PropertyRecordResolveFunctionArn:
+    Description: Property record resolve Lambda function ARN.
+    Value: !GetAtt PropertyRecordResolveFunction.Arn
+  PropertyRecordValueFunctionArn:
+    Description: Property record value Lambda function ARN.
+    Value: !GetAtt PropertyRecordValueFunction.Arn
+  PropertyValueFunctionArn:
+    Description: Property value Lambda function ARN.
+    Value: !GetAtt PropertyValueFunction.Arn

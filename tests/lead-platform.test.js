@@ -66,6 +66,13 @@ test('contact service normalizes into canonical lead model', () => {
     'leadScore',
     'leadScoreBand',
     'leadScoreReasons',
+    'engagementLevel',
+    'primaryIntent',
+    'secondaryIntent',
+    'conversionReadiness',
+    'lastScoredAt',
+    'scoringVersion',
+    'intelligenceSignals',
     'campaign',
     'referral',
     'notes',
@@ -82,6 +89,7 @@ test('contact service normalizes into canonical lead model', () => {
     'createdAt',
     'updatedAt',
   ]);
+  assert.equal(Object.prototype.hasOwnProperty.call(lead, 'idempotencyKey'), false);
   assert.equal(lead.status, 'RECEIVED');
   assert.equal(lead.provider, null);
   assert.equal(lead.providerStatus, null);

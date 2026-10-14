@@ -104,3 +104,52 @@ for (const scenario of cases) {
     assert.equal(body.provider, undefined);
   });
 }
+
+test('lead endpoints honor idempotency key for replayed submissions', async () => {
+  process.env.APP_ENV = 'local';
+  process.env.SERVICE_NAME = 'homesbyrcg-api';
+  process.env.LOG_LEVEL = 'error';
+  process.env.LEAD_PROVIDER_MODE = 'mock';
+
+  const event = createHttpApiEvent({
+    routeKey: 'POST /contact',
+    rawPath: '/contact',
+    headers: {
+      'content-type': 'application/json',
+      'x-correlation-id': 'correlation-123',
+      'idempotency-key': 'idem-contact-123',
+    },
+    requestContext: {
+      requestId: 'api-request-123',
+      http: {
+        method: 'POST',
+        path: '/contact',
+      },
+    },
+    body: JSON.stringify({
+      ...basePayload,
+      currentPage: '/contact',
+      leadIntent: 'schedule-showing',
+      message: 'Please contact me.',
+    }),
+  });
+
+  const first = await contactHandler(event, { awsRequestId: 'aws-request-123' });
+  const second = await contactHandler(
+    {
+      ...event,
+      requestContext: {
+        ...event.requestContext,
+        requestId: 'api-request-124',
+      },
+    },
+    { awsRequestId: 'aws-request-124' },
+  );
+
+  const firstBody = JSON.parse(first.body);
+  const secondBody = JSON.parse(second.body);
+
+  assert.equal(first.statusCode, 202);
+  assert.equal(second.statusCode, 202);
+  assert.equal(firstBody.leadId, secondBody.leadId);
+});

@@ -41,7 +41,6 @@ Both HTML and plain-text alternatives are sent.
 Lead Lambda functions require:
 
 - `ses:SendEmail`
-- `ses:SendRawEmail`
 
 The current SAM template grants these permissions to `ContactFunction`, `ConsultationFunction`, and
 `HomeValueFunction`, scoped to the configured `SesSender` identity ARN.

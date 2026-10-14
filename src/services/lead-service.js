@@ -3,10 +3,24 @@ import { redactLead } from '../leads/redaction.js';
 import { nowIso } from '../shared/time.js';
 
 export class LeadService {
-  constructor({ provider, repository, leadType }) {
+  constructor({
+    provider,
+    repository,
+    leadType,
+    analyticsService = null,
+    leadIntelligenceService,
+    leadIntelligenceRepository,
+    leadIntelligenceMetrics,
+    crmSyncService = null,
+  }) {
     this.provider = provider;
     this.repository = repository;
     this.leadType = leadType;
+    this.analyticsService = analyticsService;
+    this.leadIntelligenceService = leadIntelligenceService;
+    this.leadIntelligenceRepository = leadIntelligenceRepository;
+    this.leadIntelligenceMetrics = leadIntelligenceMetrics;
+    this.crmSyncService = crmSyncService;
   }
 
   async submitLead(lead, { context, logger }) {
@@ -15,6 +29,24 @@ export class LeadService {
     });
 
     const persistedLead = await this.createLead(lead, { logger });
+
+    await this.trackLeadLifecycle(persistedLead, { context, logger });
+
+    if (persistedLead.idempotencyReplay && persistedLead.providerStatus) {
+      logger.info('lead_idempotent_replay', {
+        leadId: persistedLead.leadId,
+        leadType: this.leadType,
+        providerStatus: persistedLead.providerStatus,
+      });
+
+      return {
+        provider: persistedLead.provider ?? this.provider.name ?? 'unknown',
+        status: persistedLead.providerStatus,
+        requestId: context.requestId,
+        lead: persistedLead,
+        duplicate: true,
+      };
+    }
 
     try {
       logger.info('provider_started', {
@@ -58,6 +90,22 @@ export class LeadService {
         providerStatus: result.status,
       });
 
+      if (this.crmSyncService) {
+        try {
+          await this.crmSyncService.syncLead(updatedLead, { context, logger });
+        } catch (error) {
+          logger.error('crm_sync_lead_failed', {
+            leadId: updatedLead.leadId,
+            leadType: this.leadType,
+            provider: this.crmSyncService.adapter?.name,
+            error: {
+              name: error.name,
+              message: error.message,
+            },
+          });
+        }
+      }
+
       return {
         ...result,
         lead: updatedLead,
@@ -72,6 +120,9 @@ export class LeadService {
         },
       });
 
+      const recovery = await this.handleProviderFailure(error, persistedLead, { context, logger });
+      if (recovery) return recovery;
+
       if (error instanceof AppError) {
         throw error;
       }
@@ -85,9 +136,15 @@ export class LeadService {
     }
   }
 
+  async handleProviderFailure() {
+    return null;
+  }
+
   async createLead(lead, { logger }) {
+    const leadWithIntelligence = await this.applyLeadIntelligence(lead, { logger });
+
     const startedAt = Date.now();
-    const persistedLead = await this.repository.createLead(lead);
+    const persistedLead = await this.repository.createLead(leadWithIntelligence);
     const latency = Date.now() - startedAt;
 
     logger.info('repository_latency', {
@@ -100,9 +157,103 @@ export class LeadService {
       leadId: persistedLead.leadId,
       leadType: this.leadType,
       status: persistedLead.status,
+      duplicate: Boolean(persistedLead.idempotencyReplay),
     });
 
     return persistedLead;
+  }
+
+  async applyLeadIntelligence(lead, { logger }) {
+    if (!this.leadIntelligenceService) {
+      return lead;
+    }
+
+    try {
+      const intelligence = this.leadIntelligenceService.calculate(lead);
+      const nextLead = {
+        ...lead,
+        leadScore: intelligence.leadScore,
+        leadScoreBand: intelligence.leadScoreBand,
+        leadScoreReasons: intelligence.leadScoreReasons,
+        engagementLevel: intelligence.engagementLevel,
+        primaryIntent: intelligence.primaryIntent,
+        secondaryIntent: intelligence.secondaryIntent,
+        conversionReadiness: intelligence.conversionReadiness,
+        lastScoredAt: intelligence.lastScoredAt,
+        scoringVersion: intelligence.scoringVersion,
+        intelligenceSignals: intelligence.signals,
+        metadata: {
+          ...(lead.metadata || {}),
+          leadScoreBand: intelligence.leadScoreBand,
+          leadScoreReasons: intelligence.leadScoreReasons,
+          engagementLevel: intelligence.engagementLevel,
+          primaryIntent: intelligence.primaryIntent,
+          secondaryIntent: intelligence.secondaryIntent,
+          conversionReadiness: intelligence.conversionReadiness,
+          lastScoredAt: intelligence.lastScoredAt,
+          scoringVersion: intelligence.scoringVersion,
+          intelligenceSignals: intelligence.signals,
+          intelligenceDimensions: intelligence.dimensionScores,
+        },
+      };
+
+      if (this.leadIntelligenceRepository) {
+        await this.leadIntelligenceRepository.upsert({
+          leadId: lead.leadId,
+          scoringVersion: intelligence.scoringVersion,
+          sourceFingerprint: intelligence.sourceFingerprint,
+          leadScore: intelligence.leadScore,
+          leadScoreBand: intelligence.leadScoreBand,
+          engagementLevel: intelligence.engagementLevel,
+          primaryIntent: intelligence.primaryIntent,
+          secondaryIntent: intelligence.secondaryIntent,
+          conversionReadiness: intelligence.conversionReadiness,
+          dimensionScores: intelligence.dimensionScores,
+          signals: intelligence.signals,
+          leadScoreReasons: intelligence.leadScoreReasons,
+          scoreRange: intelligence.scoreRange,
+          calculatedAt: intelligence.lastScoredAt,
+          createdAt: intelligence.lastScoredAt,
+          updatedAt: intelligence.lastScoredAt,
+        });
+      }
+
+      this.leadIntelligenceMetrics?.recordCalculated({
+        logger,
+        engagementLevel: intelligence.engagementLevel,
+        primaryIntent: intelligence.primaryIntent,
+        conversionReadiness: intelligence.conversionReadiness,
+      });
+
+      logger.info('lead_intelligence_calculated', {
+        leadId: lead.leadId,
+        leadType: this.leadType,
+        leadScore: intelligence.leadScore,
+        leadScoreBand: intelligence.leadScoreBand,
+        engagementLevel: intelligence.engagementLevel,
+        primaryIntent: intelligence.primaryIntent,
+        conversionReadiness: intelligence.conversionReadiness,
+        scoringVersion: intelligence.scoringVersion,
+      });
+
+      return nextLead;
+    } catch (error) {
+      this.leadIntelligenceMetrics?.recordFailed({
+        logger,
+        reason: 'calculation_error',
+      });
+
+      logger.error('lead_intelligence_failed', {
+        leadId: lead.leadId,
+        leadType: this.leadType,
+        error: {
+          name: error.name,
+          message: error.message,
+        },
+      });
+
+      return lead;
+    }
   }
 
   async updateLead(leadId, updates, { logger }) {
@@ -125,5 +276,13 @@ export class LeadService {
     });
 
     return updatedLead;
+  }
+
+  async trackLeadLifecycle(lead, { context, logger }) {
+    if (!this.analyticsService) {
+      return;
+    }
+
+    await this.analyticsService.trackLeadLifecycle({ lead, context, logger });
   }
 }

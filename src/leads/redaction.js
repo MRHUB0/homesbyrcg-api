@@ -39,7 +39,7 @@ function redactMetadata(metadata = {}) {
   return Object.fromEntries(
     Object.entries(metadata).map(([key, value]) => {
       if (
-        ['message', 'name', 'email', 'phone', 'notes'].some((field) =>
+        ['message', 'name', 'email', 'phone', 'notes', 'address'].some((field) =>
           key.toLowerCase().includes(field),
         )
       ) {

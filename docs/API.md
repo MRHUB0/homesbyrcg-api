@@ -4,9 +4,15 @@
 
 ```http
 GET /health
+POST /leads
 POST /contact
 POST /consultation
 POST /home-value
+POST /property-search
+POST /property-record/resolve
+POST /property-record/value
+POST /property-value
+POST /events
 ```
 
 Error responses use the canonical error envelope. Successful lead submissions return a non-PII
@@ -33,6 +39,33 @@ Malformed JSON returns `400`. Field validation failures return `422`. Unknown ex
 
 Provider details and PII are intentionally omitted from successful responses. The persisted lead is
 created before provider execution, and the provider result is stored on the lead record.
+
+## Property Endpoints
+
+Property endpoints return `200` with a canonical result status in `data.status`:
+
+- `FOUND`
+- `MULTIPLE_MATCHES`
+- `NOT_FOUND`
+- `PROVIDER_UNAVAILABLE`
+
+`/property-record/value` and `/property-value` require `leadId` by default and enforce server-side
+journey gating unless `PROPERTY_VALUE_REQUIRE_LEAD_CONTEXT=false`.
+
+### POST /property-search
+
+Resolves address input to canonical property identities and returns summary matches.
+
+### POST /property-record/resolve
+
+Returns canonical property records (identity, normalized/display address, parcel, jurisdiction,
+public-record owner display name when available, characteristics, assessment, valuation
+placeholders, provenance, timestamps).
+
+### POST /property-record/value and POST /property-value
+
+Return valuation response payloads with explicit value type semantics. Assessed values are never
+presented as market value.
 
 ## POST /contact
 
@@ -114,3 +147,28 @@ Allowed values:
 
 - `leadIntent`: `home-valuation`, `sell-my-home`, `market-analysis`
 - `propertyType`: `single-family`, `condo`, `townhome`, `multi-family`, `land`
+
+## POST /events
+
+```json
+{
+  "eventName": "funnel_started",
+  "eventVersion": "1.0",
+  "occurredAt": "2026-09-05T12:00:00.000Z",
+  "visitorId": "visitor-123",
+  "sessionId": "session-123",
+  "journeyId": "journey-123",
+  "funnel": "home-value",
+  "landingPage": "/home-value",
+  "attribution": {
+    "utm_source": "google",
+    "utm_medium": "cpc",
+    "utm_campaign": "fall-home-value"
+  },
+  "metadata": {
+    "entryVariant": "hero"
+  }
+}
+```
+
+Successful event submissions return `202` with event acceptance metadata and duplicate indicator.

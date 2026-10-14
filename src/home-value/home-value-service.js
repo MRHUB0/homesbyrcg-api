@@ -3,8 +3,25 @@ import { LeadService } from '../services/lead-service.js';
 import { normalizeHomeValueRequest } from './home-value-validation.js';
 
 export class HomeValueService extends LeadService {
-  constructor({ provider, repository }) {
-    super({ provider, repository, leadType: LeadTypes.HOME_VALUE });
+  constructor({
+    provider,
+    repository,
+    analyticsService,
+    leadIntelligenceService,
+    leadIntelligenceRepository,
+    leadIntelligenceMetrics,
+    crmSyncService,
+  }) {
+    super({
+      provider,
+      repository,
+      leadType: LeadTypes.HOME_VALUE,
+      analyticsService,
+      leadIntelligenceService,
+      leadIntelligenceRepository,
+      leadIntelligenceMetrics,
+      crmSyncService,
+    });
   }
 
   normalize(payload, { context }) {

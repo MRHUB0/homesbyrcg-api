@@ -15,7 +15,12 @@ The foundation provides:
 - contact endpoint
 - consultation endpoint
 - home value endpoint
+- property search endpoint
+- property record resolution endpoint
+- property value endpoints
+- analytics events endpoint
 - DynamoDB lead persistence
+- DynamoDB analytics event persistence
 - repository abstraction for lead storage
 - provider abstraction for lead delivery
 
@@ -25,6 +30,8 @@ Lead endpoints follow the same architecture:
 API Gateway
   -> Lambda Handler
   -> Business Service
+  -> LeadIntelligenceService
+  -> LeadIntelligenceRepository (derived snapshots)
   -> LeadRepository
   -> DynamoDB LeadTable
   -> Provider Interface
@@ -33,7 +40,8 @@ API Gateway
 ```
 
 Each lead endpoint validates the request, normalizes it into the canonical lead model, logs a
-redacted copy of the normalized object, persists it through `LeadRepository`, submits the persisted
+redacted copy of the normalized object, calculates deterministic lead intelligence from canonical
+signals, persists both the canonical lead and derived intelligence snapshot, submits the persisted
 lead through a provider abstraction, records provider status back to the table, and returns a
 non-PII accepted response.
 
@@ -54,3 +62,22 @@ API latency, and SES rejects. API Gateway and Lambda log groups retain logs for 
 
 Authentication, AI, and CRM integrations are intentionally absent. Future endpoints should compose
 the shared middleware and return the canonical response model.
+
+Property data architecture:
+
+```text
+API Gateway
+  -> Lambda Handler
+  -> PropertyService
+  -> Address Normalization
+  -> PropertyProvider (mock | franklin-county-gis)
+  -> Canonical Property Record
+  -> Response Builder
+```
+
+Property identity is canonicalized as `propertyRef` and derived from parcel identity when available,
+falling back to normalized-address identity. Provider identity is retained separately under
+`identity.providerIdentity`.
+
+Canonical analytics events are accepted at `POST /events` and persisted to
+`AnalyticsEventTable` for deterministic funnel, attribution, and conversion measurement.

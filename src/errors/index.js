@@ -81,6 +81,10 @@ export class ErrorBuilder {
   static toResponseErrors(error) {
     const appError = ErrorBuilder.from(error);
 
+    if (appError.statusCode >= 500) {
+      return [{ code: appError.code, message: appError.message }];
+    }
+
     if (appError.details.length > 0) {
       return appError.details.map((detail) =>
         typeof detail === 'string'

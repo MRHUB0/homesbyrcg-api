@@ -7,6 +7,8 @@ import {
   LeadIntentValues,
   LeadScoreBandValues,
 } from '../leads/lead-model.js';
+import { EventFamilies, SupportedEventNames } from '../analytics/event-taxonomy.js';
+import { FunnelStages } from '../analytics/funnel-classification.js';
 
 const leadIntentValues = [
   ...new Set([
@@ -118,6 +120,141 @@ paths:
           description: Field validation failed
         "500":
           description: Internal server error
+  /events:
+    options:
+      summary: CORS preflight
+      responses:
+        "204":
+          description: Preflight accepted
+    post:
+      summary: Submit a canonical analytics event
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AnalyticsEventRequest"
+      responses:
+        "202":
+          description: Analytics event accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalyticsEventAcceptedResponse"
+        "400":
+          description: Malformed request
+        "422":
+          description: Field validation failed
+        "500":
+          description: Internal server error
+  /property-search:
+    options:
+      summary: CORS preflight
+      responses:
+        "204":
+          description: Preflight accepted
+    post:
+      summary: Search for a property by address input
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PropertyLookupRequest"
+      responses:
+        "200":
+          description: Property lookup result envelope
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "422":
+          description: Invalid property input
+        "500":
+          description: Internal server error
+  /property-record/resolve:
+    options:
+      summary: CORS preflight
+      responses:
+        "204":
+          description: Preflight accepted
+    post:
+      summary: Resolve a canonical property record from address input
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PropertyLookupRequest"
+      responses:
+        "200":
+          description: Property record resolution envelope
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "422":
+          description: Invalid property input
+        "500":
+          description: Internal server error
+  /property-record/value:
+    options:
+      summary: CORS preflight
+      responses:
+        "204":
+          description: Preflight accepted
+    post:
+      summary: Resolve property value record with journey-gated access
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PropertyLookupValueRequest"
+      responses:
+        "200":
+          description: Property value record envelope
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "401":
+          description: Authentication required
+        "403":
+          description: Value access denied
+        "422":
+          description: Invalid request
+        "500":
+          description: Internal server error
+  /property-value:
+    options:
+      summary: CORS preflight
+      responses:
+        "204":
+          description: Preflight accepted
+    post:
+      summary: Resolve property valuation view with journey-gated access
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PropertyLookupValueRequest"
+      responses:
+        "200":
+          description: Property value envelope
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "401":
+          description: Authentication required
+        "403":
+          description: Value access denied
+        "422":
+          description: Invalid request
+        "500":
+          description: Internal server error
 components:
   schemas:
     ApiEnvelope:
@@ -171,6 +308,35 @@ components:
         timestamp:
           type: string
           format: date-time
+    AnalyticsEventAcceptedResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                eventId:
+                  type: string
+                eventName:
+                  type: string
+                  enum: ${yamlInlineArray(SupportedEventNames)}
+                eventVersion:
+                  type: string
+                duplicate:
+                  type: boolean
+                family:
+                  type: string
+                  enum: ${yamlInlineArray(Object.values(EventFamilies))}
+                funnelStage:
+                  type: string
+                  enum: ${yamlInlineArray(Object.values(FunnelStages))}
+                conversionClass:
+                  type: string
+                  enum: [NONE, MICRO, LEAD, HIGH_INTENT, BUSINESS]
+                occurredAt:
+                  type: string
+                  format: date-time
     LeadInput:
       type: object
       additionalProperties: true
@@ -252,11 +418,84 @@ components:
         referral:
           type: string
           maxLength: 500
+        visitorId:
+          type: string
+          maxLength: 120
+        sessionId:
+          type: string
+          maxLength: 120
+        journeyId:
+          type: string
+          maxLength: 120
+        propertyRef:
+          type: string
+          maxLength: 240
+        funnel:
+          type: string
+          maxLength: 120
+        landingPage:
+          type: string
+          maxLength: 2048
+        consent:
+          type: object
+          additionalProperties: true
+        attribution:
+          type: object
+          additionalProperties: true
+        idempotencyKey:
+          type: string
+          maxLength: 120
         metadata:
           type: object
           description: Campaign metadata is allowlisted by the receiving lead service.
           additionalProperties: true
         lead:
+          type: object
+          additionalProperties: true
+    AnalyticsEventRequest:
+      type: object
+      required: [eventName]
+      properties:
+        eventId:
+          type: string
+          maxLength: 120
+        eventName:
+          type: string
+          enum: ${yamlInlineArray(SupportedEventNames)}
+        eventVersion:
+          type: string
+          maxLength: 30
+        occurredAt:
+          type: string
+          format: date-time
+        visitorId:
+          type: string
+          maxLength: 120
+        sessionId:
+          type: string
+          maxLength: 120
+        journeyId:
+          type: string
+          maxLength: 120
+        leadId:
+          type: string
+          maxLength: 120
+        funnel:
+          type: string
+          maxLength: 120
+        landingPage:
+          type: string
+          maxLength: 2048
+        propertyRef:
+          type: string
+          maxLength: 240
+        consent:
+          type: object
+          additionalProperties: true
+        attribution:
+          type: object
+          additionalProperties: true
+        metadata:
           type: object
           additionalProperties: true
     ContactRequest:
@@ -311,6 +550,48 @@ components:
             propertyType:
               type: string
               enum: [single-family, condo, townhome, multi-family, land, residential]
+    PropertyLookupRequest:
+      type: object
+      properties:
+        propertyAddress:
+          type: string
+          maxLength: 240
+        addressLine1:
+          type: string
+          maxLength: 240
+        addressLine2:
+          type: string
+          maxLength: 120
+        city:
+          type: string
+          maxLength: 120
+        state:
+          type: string
+          minLength: 2
+          maxLength: 2
+        postalCode:
+          type: string
+          minLength: 5
+          maxLength: 10
+        zipCode:
+          type: string
+          minLength: 5
+          maxLength: 10
+        county:
+          type: string
+          maxLength: 120
+      anyOf:
+        - required: [propertyAddress]
+        - required: [addressLine1]
+    PropertyLookupValueRequest:
+      allOf:
+        - $ref: "#/components/schemas/PropertyLookupRequest"
+        - type: object
+          required: [leadId]
+          properties:
+            leadId:
+              type: string
+              maxLength: 120
 `;
 }
 

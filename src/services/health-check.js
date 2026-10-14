@@ -7,6 +7,14 @@ export class HealthCheck {
       environment: config.appEnvironment,
       timestamp: context.timestamp,
       requestId: context.requestId,
+      integrations: {
+        crm: {
+          providerMode: config.crmProviderMode,
+          configured:
+            config.crmProviderMode === 'boldtrail' ? Boolean(config.boldTrailApiToken) : true,
+          endpoint: config.crmProviderMode === 'boldtrail' ? config.boldTrailApiBaseUrl : null,
+        },
+      },
     };
   }
 }

@@ -19,8 +19,10 @@ HomesByRCG.com
 Implemented routes:
 
 - `POST /contact`
+- `POST /leads`
 - `POST /consultation`
 - `POST /home-value`
+- `POST /events`
 
 ## Canonical Lead Model
 
@@ -43,6 +45,12 @@ Every lead is normalized into one object:
   "leadIntent": "buying-consultation",
   "leadScore": 90,
   "leadScoreBand": "Very High",
+  "engagementLevel": "HOT",
+  "primaryIntent": "BUYER",
+  "secondaryIntent": "UNKNOWN",
+  "conversionReadiness": "READY",
+  "lastScoredAt": "2026-09-01T12:00:00.000Z",
+  "scoringVersion": "2026-09-05.v1",
   "leadScoreReasons": [
     { "id": "strategy-session", "label": "Requested a Strategy Session", "points": 35 }
   ],
@@ -65,6 +73,14 @@ Every lead is normalized into one object:
     { "event": "landing", "path": "/life-decisions/buying-first-home/" },
     { "event": "consultation_requested", "path": "/strategy-session/" }
   ],
+  "intelligenceSignals": [
+    {
+      "signal": "CONSULTATION_REQUESTED",
+      "contribution": 22.4,
+      "occurrences": 1,
+      "recencyBuckets": ["LAST_7_DAYS"]
+    }
+  ],
   "notes": "I want to buy this year.",
   "metadata": {},
   "provider": null,
@@ -77,6 +93,9 @@ Every lead is normalized into one object:
 Endpoint-specific data is stored in `metadata`. Examples include consultation preferences and home
 valuation property details. Lead intelligence is also available at the canonical top level and is
 mirrored into metadata for compatibility with existing consumers.
+
+Derived explainability snapshots are additionally stored in `LeadIntelligenceTable` by `leadId` so
+raw canonical history and derived intelligence remain separate concerns.
 
 ## Lead Lifecycle
 
@@ -121,6 +140,17 @@ Table: `LeadTable`
 - Recovery: point-in-time recovery enabled
 - Encryption: server-side encryption enabled
 - GSI: `LeadEmailIndex` with `email` as the partition key for `findLeadByEmail()`
+- GSI: `LeadIdempotencyIndex` with `idempotencyKey` as the partition key for replay protection
+
+Table: `AnalyticsEventTable`
+
+- Partition key: `eventId`
+- Sort key: none
+- Billing: `PAY_PER_REQUEST`
+- Recovery: point-in-time recovery enabled
+- Encryption: server-side encryption enabled
+- GSIs for `visitorId`, `sessionId`, `journeyId`, `leadId`, `funnel`, `attributionCampaign`,
+  `landingPage`, and `propertyRef` by `occurredAt`
 
 Allowed DynamoDB actions for lead functions are `GetItem`, `PutItem`, `UpdateItem`, and `Query`.
 
@@ -155,10 +185,10 @@ Provider folders:
 All lead providers submit a persisted canonical lead. SES providers send branded lead emails. Mock
 providers return `accepted` and do not send, enrich, or forward data.
 
-Pure mapping functions in `src/integrations/crm/lead-mapper.js` produce canonical or proposed
-BoldTrail-shaped exports. They never make network calls. Any future CRM delivery must run
-server-side after durable lead persistence, with idempotency, retries, monitoring, and approved
-vendor field identifiers.
+CRM delivery now runs server-side after durable lead persistence through
+`src/integrations/crm/crm-sync-service.js` and provider adapters. The BoldTrail implementation in
+`src/integrations/crm/boldtrail/` uses idempotency, bounded retries, monitoring metrics, and
+vendor-specific mappings without changing canonical lead schema ownership.
 
 ## Observability
 

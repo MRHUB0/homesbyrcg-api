@@ -15,6 +15,8 @@ export class RequestContext {
     return Object.freeze({
       requestId,
       correlationId: correlationId || CorrelationId.create(),
+      idempotencyKey:
+        getHeader(headers, 'idempotency-key') ?? getHeader(headers, 'x-idempotency-key') ?? null,
       timestamp: nowIso(),
       environment: config.appEnvironment,
       serviceName: config.serviceName,

@@ -16,6 +16,18 @@ function canonicalFields(lead = {}) {
     assessments: lead.leadContext?.assessmentCompleted ? ['housing-decision-assessment'] : [],
     downloads: lead.leadContext?.guidesDownloaded || [],
     timeline: lead.journeyTimeline || [],
+    intelligence: {
+      leadScore: lead.leadScore,
+      leadScoreBand: lead.leadScoreBand,
+      engagementLevel: lead.engagementLevel,
+      primaryIntent: lead.primaryIntent,
+      secondaryIntent: lead.secondaryIntent,
+      conversionReadiness: lead.conversionReadiness,
+      scoringVersion: lead.scoringVersion,
+      lastScoredAt: lead.lastScoredAt,
+      reasons: lead.leadScoreReasons || [],
+      signals: lead.intelligenceSignals || [],
+    },
   };
 }
 
@@ -33,8 +45,16 @@ export function mapLeadForCrm(lead, destination = 'canonical') {
     notes: JSON.stringify({
       homesByRcgLeadId: fields.externalLeadId,
       primaryInterest: fields.primaryInterest,
-      leadScore: fields.score,
-      leadScoreReasons: fields.scoreReasons,
+      leadScore: fields.intelligence.leadScore,
+      leadScoreBand: fields.intelligence.leadScoreBand,
+      engagementLevel: fields.intelligence.engagementLevel,
+      primaryIntent: fields.intelligence.primaryIntent,
+      secondaryIntent: fields.intelligence.secondaryIntent,
+      conversionReadiness: fields.intelligence.conversionReadiness,
+      leadScoreReasons: fields.intelligence.reasons,
+      intelligenceSignals: fields.intelligence.signals,
+      scoringVersion: fields.intelligence.scoringVersion,
+      lastScoredAt: fields.intelligence.lastScoredAt,
       referralSource: fields.referralSource,
       campaign: fields.campaign,
       contentViewed: fields.contentViewed,

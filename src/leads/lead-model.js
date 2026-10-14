@@ -147,6 +147,20 @@ export const DecisionTypeValues = Object.freeze([
 ]);
 
 export const LeadScoreBandValues = Object.freeze(['Low', 'Medium', 'High', 'Very High']);
+const blockedStructuredKeys = new Set(['__proto__', 'prototype', 'constructor']);
+
+export const EngagementLevelValues = Object.freeze(['COLD', 'WARM', 'HOT']);
+
+export const IntentClassificationValues = Object.freeze([
+  'BUYER',
+  'SELLER',
+  'SELL_AND_BUY',
+  'INVESTOR',
+  'LANDLORD',
+  'UNKNOWN',
+]);
+
+export const ConversionReadinessValues = Object.freeze(['LOW', 'MEDIUM', 'HIGH', 'READY']);
 
 function isRecord(value) {
   return (
@@ -160,6 +174,14 @@ function isTimeline(value) {
 
 function isScoreReasons(value) {
   return value === undefined || value === null || (Array.isArray(value) && value.length <= 20);
+}
+
+function isConsent(value) {
+  return isRecord(value);
+}
+
+function isAttribution(value) {
+  return isRecord(value);
 }
 
 const commonLeadSchema = {
@@ -210,6 +232,14 @@ const commonLeadSchema = {
   leadScoreReasons: [
     Validators.custom(isScoreReasons, 'Lead score reasons must contain no more than 20 entries.'),
   ],
+  visitorId: [Validators.length({ max: 120 })],
+  sessionId: [Validators.length({ max: 120 })],
+  journeyId: [Validators.length({ max: 120 })],
+  propertyRef: [Validators.length({ max: 240 })],
+  funnel: [Validators.length({ max: 120 })],
+  landingPage: [Validators.length({ max: 2048 })],
+  consent: [Validators.custom(isConsent, 'Consent must be an object.')],
+  attribution: [Validators.custom(isAttribution, 'Attribution must be an object.')],
   metadata: [Validators.custom(isRecord, 'Metadata must be an object.')],
 };
 
@@ -254,8 +284,11 @@ export function buildCanonicalLead({
   timestamp = nowIso(),
 }) {
   const createdAt = timestamp;
+  const idempotencyKey = normalizeString(
+    normalizedRequest.idempotencyKey ?? context.idempotencyKey,
+  );
 
-  return {
+  const canonicalLead = {
     leadId,
     leadType,
     timestamp,
@@ -273,6 +306,13 @@ export function buildCanonicalLead({
     leadScore: valueOrNull(normalizedRequest.leadScore),
     leadScoreBand: valueOrNull(normalizedRequest.leadScoreBand),
     leadScoreReasons: normalizedRequest.leadScoreReasons || [],
+    engagementLevel: null,
+    primaryIntent: null,
+    secondaryIntent: null,
+    conversionReadiness: null,
+    lastScoredAt: null,
+    scoringVersion: null,
+    intelligenceSignals: [],
     campaign: valueOrNull(normalizedRequest.campaign),
     referral: valueOrNull(normalizedRequest.referral),
     notes: valueOrNull(normalizedRequest.notes),
@@ -295,12 +335,26 @@ export function buildCanonicalLead({
       journeyTimeline: normalizedRequest.journeyTimeline || [],
       leadScoreBand: valueOrNull(normalizedRequest.leadScoreBand),
       leadScoreReasons: normalizedRequest.leadScoreReasons || [],
+      analyticsContext: buildAnalyticsContext(normalizedRequest),
+      engagementLevel: null,
+      primaryIntent: null,
+      secondaryIntent: null,
+      conversionReadiness: null,
+      lastScoredAt: null,
+      scoringVersion: null,
+      intelligenceSignals: [],
     },
     provider: null,
     providerStatus: null,
     createdAt,
     updatedAt: createdAt,
   };
+
+  if (typeof idempotencyKey === 'string' && idempotencyKey.length > 0) {
+    canonicalLead.idempotencyKey = idempotencyKey;
+  }
+
+  return canonicalLead;
 }
 
 export function normalizeString(value) {
@@ -367,13 +421,80 @@ function normalizeCommonLeadFields(payload) {
       payload?.leadScoreReasons ?? embeddedLead.leadScoreReasons,
       [],
     ),
+    visitorId: normalizeString(payload?.visitorId ?? embeddedLead.visitorId),
+    sessionId: normalizeString(payload?.sessionId ?? embeddedLead.sessionId),
+    journeyId: normalizeString(payload?.journeyId ?? embeddedLead.journeyId),
+    propertyRef: normalizeString(payload?.propertyRef ?? embeddedLead.propertyRef),
+    funnel: normalizeString(payload?.funnel ?? embeddedLead.funnel),
+    landingPage: normalizeString(
+      payload?.landingPage ??
+        embeddedLead.landingPage ??
+        payload?.currentPage ??
+        embeddedLead.currentPage,
+    ),
+    consent: normalizeStructured(payload?.consent ?? embeddedLead.consent, {}),
+    attribution: normalizeStructured(
+      {
+        ...normalizeStructured(payload?.attribution ?? embeddedLead.attribution, {}),
+        utm_source: normalizeString(
+          payload?.utm_source ?? payload?.utm?.source ?? payload?.attribution?.utm_source,
+        ),
+        utm_medium: normalizeString(
+          payload?.utm_medium ?? payload?.utm?.medium ?? payload?.attribution?.utm_medium,
+        ),
+        utm_campaign: normalizeString(
+          payload?.utm_campaign ?? payload?.utm?.campaign ?? payload?.attribution?.utm_campaign,
+        ),
+        utm_term: normalizeString(
+          payload?.utm_term ?? payload?.utm?.term ?? payload?.attribution?.utm_term,
+        ),
+        utm_content: normalizeString(
+          payload?.utm_content ?? payload?.utm?.content ?? payload?.attribution?.utm_content,
+        ),
+        referrer: normalizeString(payload?.referrer ?? payload?.referral),
+        landingPage: normalizeString(
+          payload?.landingPage ?? payload?.currentPage ?? embeddedLead.currentPage,
+        ),
+      },
+      {},
+    ),
+    idempotencyKey: normalizeString(payload?.idempotencyKey ?? embeddedLead.idempotencyKey),
     metadata: normalizeStructured(payload?.metadata ?? embeddedLead.metadata, {}),
+  };
+}
+
+function buildAnalyticsContext(normalizedRequest) {
+  return {
+    visitorId: valueOrNull(normalizedRequest.visitorId),
+    sessionId: valueOrNull(normalizedRequest.sessionId),
+    journeyId: valueOrNull(normalizedRequest.journeyId ?? normalizedRequest.sessionId),
+    propertyRef: valueOrNull(normalizedRequest.propertyRef),
+    funnel: valueOrNull(normalizedRequest.funnel),
+    landingPage: valueOrNull(normalizedRequest.landingPage ?? normalizedRequest.currentPage),
+    consent: normalizedRequest.consent || {},
+    attribution: normalizedRequest.attribution || {},
   };
 }
 
 function normalizeStructured(value, fallback) {
   if (value === undefined || value === null) return fallback;
-  return JSON.parse(JSON.stringify(value));
+  return sanitizeStructured(JSON.parse(JSON.stringify(value)));
+}
+
+function sanitizeStructured(value) {
+  if (Array.isArray(value)) {
+    return value.map((item) => sanitizeStructured(item));
+  }
+
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value)
+        .filter(([key]) => !blockedStructuredKeys.has(key))
+        .map(([key, item]) => [key, sanitizeStructured(item)]),
+    );
+  }
+
+  return value;
 }
 
 function splitName(value) {
