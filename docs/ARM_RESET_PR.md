@@ -1,0 +1,5 @@
+Completes ARM campaign validation and consent records on existing POST /leads. Marketing is optional; contact/address/timeframe remain in the existing lead model. ARM notifications use the requested subject/content, and SES failure records pending notification while acknowledging the persisted lead so playbook delivery remains available. Existing campaign failure behavior and optional CRM isolation are preserved. Adds throttling on the existing shared lead API route; no new AWS resource or migration.
+
+Validation: all tracked API tests, lint, JS build, changed-file formatting, and SAM template lint pass in isolation. SAM packaging times out during dependency installation in this restricted environment; live development SES/database checks and Node 22 packaging remain pending. Eleven ARM cases cover persistence, consent, notification/retry, duplicates, spam/validation, CRM isolation, and unchanged campaigns. No deployment.
+
+Stacked on fix/rental-check-commercial-ui. See ARM_RESET_IMPLEMENTATION.md for release configuration, pending-notification handling, deployment, and rollback.

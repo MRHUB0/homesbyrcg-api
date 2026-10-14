@@ -147,6 +147,10 @@ Resources:
     Type: AWS::Serverless::HttpApi
     Properties:
       StageName: !Ref AppEnvironment
+      RouteSettings:
+        'POST /leads':
+          ThrottlingBurstLimit: 20
+          ThrottlingRateLimit: 10
       CorsConfiguration:
         AllowOrigins: !Split [',', !Ref CorsAllowedOrigins]
         AllowMethods:

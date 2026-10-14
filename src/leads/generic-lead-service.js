@@ -1,3 +1,4 @@
+import { ProviderError } from '../errors/index.js';
 import { buildCanonicalLead, LeadTypes } from './lead-model.js';
 import { LeadService } from '../services/lead-service.js';
 import { normalizeGenericLeadRequest } from './generic-lead-validation.js';
@@ -51,6 +52,29 @@ export class GenericLeadService extends LeadService {
       leadIntelligenceMetrics,
       crmSyncService,
     });
+  }
+
+  async submitLead(lead, options) {
+    const result = await super.submitLead(lead, options);
+    if (lead.campaign === 'ARM_RESET_2026' && result.status === 'accepted') {
+      result.lead = await this.repository.updateLead(result.lead.leadId, {
+        notificationStatus: result.provider === 'ses' ? 'sent' : 'mocked',
+      });
+    }
+    return result;
+  }
+
+  async handleProviderFailure(error, saved, { logger }) {
+    if (saved.campaign !== 'ARM_RESET_2026' || !(error instanceof ProviderError)) return null;
+    const updated = await this.repository.updateLead(saved.leadId, {
+      notificationStatus: 'pending',
+      notificationAttemptedAt: new Date().toISOString(),
+    });
+    logger.error('arm_notification_pending', {
+      leadId: saved.leadId,
+      reason: 'provider_unavailable',
+    });
+    return { provider: this.provider.name, status: 'notification_pending', lead: updated };
   }
 
   normalize(payload, { context }) {

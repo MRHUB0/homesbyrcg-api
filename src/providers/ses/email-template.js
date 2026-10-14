@@ -5,29 +5,58 @@ const brand = {
 };
 
 export function renderLeadEmail({ lead, title }) {
-  const rows = [
-    ['Lead Type', lead.leadType],
-    ['Name', `${lead.firstName} ${lead.lastName}`],
-    ['Email', lead.email],
-    ['Phone', lead.phone],
-    ['Journey Source', lead.journeySource],
-    ['Current Page', lead.currentPage],
-    ['Lead Intent', lead.leadIntent],
-    ['Lead Score', lead.leadScore],
-    ['Lead Score Band', lead.leadScoreBand],
-    ['Decision Journey', lead.leadContext?.decisionJourney],
-    ['Primary Goal', lead.leadContext?.primaryGoal],
-    ['Campaign', lead.campaign],
-    ['Referral', lead.referral],
-    ['Message', lead.notes],
-    ['Timestamp', lead.timestamp],
-    ['Request ID', lead.requestId],
-    ['Correlation ID', lead.correlationId],
-    ...metadataRows(lead.metadata),
-  ];
+  const isArm = lead.campaign === 'ARM_RESET_2026';
+  const rows = isArm
+    ? [
+        ['Name', [lead.firstName, lead.lastName].filter(Boolean).join(' ')],
+        ['Email', lead.email],
+        ...(lead.phone ? [['Phone', lead.phone]] : []),
+        ...(lead.metadata?.propertyAddress
+          ? [['Property Address', lead.metadata.propertyAddress]]
+          : []),
+        ['Campaign', lead.campaign],
+        ['Lead Source', lead.metadata?.source || lead.journeySource],
+        ['Requested Service', lead.metadata?.requestedService],
+        ['Adjustment Timeframe', lead.metadata?.timeframe || 'Not provided'],
+        ['Submission Timestamp', lead.timestamp],
+        [
+          'Privacy Acknowledgment',
+          lead.metadata?.analyticsContext?.consent?.privacy?.acknowledged === true
+            ? 'Acknowledged'
+            : 'Not acknowledged',
+        ],
+        [
+          'Marketing Consent',
+          lead.metadata?.analyticsContext?.consent?.marketing?.agreed === true
+            ? 'Opted in'
+            : 'Not opted in',
+        ],
+      ]
+    : [
+        ['Lead Type', lead.leadType],
+        ['Name', `${lead.firstName} ${lead.lastName}`],
+        ['Email', lead.email],
+        ['Phone', lead.phone],
+        ['Journey Source', lead.journeySource],
+        ['Current Page', lead.currentPage],
+        ['Lead Intent', lead.leadIntent],
+        ['Lead Score', lead.leadScore],
+        ['Lead Score Band', lead.leadScoreBand],
+        ['Decision Journey', lead.leadContext?.decisionJourney],
+        ['Primary Goal', lead.leadContext?.primaryGoal],
+        ['Campaign', lead.campaign],
+        ['Referral', lead.referral],
+        ['Message', lead.notes],
+        ['Timestamp', lead.timestamp],
+        ['Request ID', lead.requestId],
+        ['Correlation ID', lead.correlationId],
+        ...metadataRows(lead.metadata),
+      ];
 
   return {
-    subject: `${brand.company} ${title}: ${lead.firstName} ${lead.lastName}`,
+    subject: isArm
+      ? 'New HomesByRCG Lead — ARM Reset Playbook'
+      : `${brand.company} ${title}: ${lead.firstName} ${lead.lastName}`,
     html: renderHtml(rows, title),
     text: renderText(rows, title),
   };

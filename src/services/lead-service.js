@@ -120,6 +120,9 @@ export class LeadService {
         },
       });
 
+      const recovery = await this.handleProviderFailure(error, persistedLead, { context, logger });
+      if (recovery) return recovery;
+
       if (error instanceof AppError) {
         throw error;
       }
@@ -131,6 +134,10 @@ export class LeadService {
         },
       ]);
     }
+  }
+
+  async handleProviderFailure() {
+    return null;
   }
 
   async createLead(lead, { logger }) {
