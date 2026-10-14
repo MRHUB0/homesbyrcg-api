@@ -63,6 +63,13 @@ export class GenericLeadService extends LeadService {
       metadata: {
         originalEndpoint: '/leads',
         ...allowedMetadata(normalizedRequest.metadata),
+        ...(normalizedRequest.campaign === 'ARM_RESET_2026'
+          ? {
+              requestPropertyReview: normalizedRequest.metadata.requestPropertyReview,
+              propertyAddress: normalizedRequest.metadata.propertyAddress,
+              requestedService: normalizedRequest.metadata.requestedService,
+            }
+          : {}),
       },
     });
   }
